@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1560 450" width="1560" height="450" font-family="Inter, 'Segoe UI', sans-serif" role="img">
+<title>Path A · You run incidents in Grafana Incident</title>
+<defs><filter id="sh" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#000" flood-opacity="0.45"/></filter></defs>
+<rect x="0" y="0" width="1560" height="450" fill="#111217"/>
+<circle cx="1520" cy="28" r="140" fill="#3274D9" fill-opacity="0.06"/>
+<text x="48" y="46" font-size="14" font-weight="800" fill="#F46800" letter-spacing="3">LIFECYCLE OF A NOTIFICATION — with Grafana Incident</text>
+<text x="48" y="82" font-size="26" font-weight="800" fill="#ECEDED">Path A · You run incidents in Grafana Incident</text>
+<circle cx="1210" cy="60" r="5" fill="#F46800"/>
+<text x="1222" y="64" font-size="11.5" font-weight="600" fill="#9AA0AA">Shared steps</text>
+<circle cx="1345" cy="60" r="5" fill="#3274D9"/>
+<text x="1357" y="64" font-size="11.5" font-weight="600" fill="#9AA0AA">This path</text>
+<rect x="40.0" y="156" width="187.42857142857142" height="176" rx="13" fill="#23262d" filter="url(#sh)"/>
+<rect x="40.0" y="156" width="187.42857142857142" height="176" rx="13" fill="none" stroke="#F46800" stroke-width="1" stroke-opacity="0.45"/>
+<circle cx="60.0" cy="190" r="17" fill="#F46800"/>
+<text x="60.0" y="195" font-size="15" font-weight="800" fill="#111217" text-anchor="middle">1</text>
+<text x="56.0" y="234" font-size="15" font-weight="700" fill="#ECEDED">Page arrives</text>
+<text x="56.0" y="264" font-size="11.5" fill="#9AA0AA">push · phone · SMS · Slack</text>
+<text x="56.0" y="282" font-size="11.5" fill="#9AA0AA">however it reaches you</text>
+<rect x="255.42857142857142" y="156" width="187.42857142857142" height="176" rx="13" fill="#23262d" filter="url(#sh)"/>
+<rect x="255.42857142857142" y="156" width="187.42857142857142" height="176" rx="13" fill="none" stroke="#F46800" stroke-width="1" stroke-opacity="0.45"/>
+<circle cx="275.42857142857144" cy="190" r="17" fill="#F46800"/>
+<text x="275.42857142857144" y="195" font-size="15" font-weight="800" fill="#111217" text-anchor="middle">2</text>
+<text x="271.42857142857144" y="234" font-size="15" font-weight="700" fill="#ECEDED">Acknowledge</text>
+<text x="271.42857142857144" y="264" font-size="11.5" fill="#9AA0AA">stops escalation</text>
+<text x="271.42857142857144" y="282" font-size="11.5" fill="#9AA0AA">phone 1 · Ack button · mobile</text>
+<rect x="470.85714285714283" y="156" width="187.42857142857142" height="176" rx="13" fill="#23262d" filter="url(#sh)"/>
+<rect x="470.85714285714283" y="156" width="187.42857142857142" height="176" rx="13" fill="none" stroke="#F46800" stroke-width="1" stroke-opacity="0.45"/>
+<circle cx="490.85714285714283" cy="190" r="17" fill="#F46800"/>
+<text x="490.85714285714283" y="195" font-size="15" font-weight="800" fill="#111217" text-anchor="middle">3</text>
+<text x="486.85714285714283" y="234" font-size="15" font-weight="700" fill="#ECEDED">Triage</text>
+<text x="486.85714285714283" y="264" font-size="11.5" fill="#9AA0AA">read alerts &amp; labels</text>
+<text x="486.85714285714283" y="282" font-size="11.5" fill="#9AA0AA">silence noise (time-limited)</text>
+<rect x="686.2857142857142" y="156" width="187.42857142857142" height="176" rx="13" fill="#23262d" filter="url(#sh)"/>
+<rect x="686.2857142857142" y="156" width="187.42857142857142" height="176" rx="13" fill="none" stroke="#3274D9" stroke-width="1" stroke-opacity="0.45"/>
+<circle cx="706.2857142857142" cy="190" r="17" fill="#3274D9"/>
+<text x="706.2857142857142" y="195" font-size="15" font-weight="800" fill="#111217" text-anchor="middle">4</text>
+<text x="702.2857142857142" y="234" font-size="15" font-weight="700" fill="#ECEDED">Declare incident</text>
+<text x="702.2857142857142" y="264" font-size="11.5" fill="#9AA0AA">Actions → Declare incident</text>
+<text x="702.2857142857142" y="282" font-size="11.5" fill="#9AA0AA">attach alert group(s) — max 5</text>
+<rect x="901.7142857142857" y="156" width="187.42857142857142" height="176" rx="13" fill="#23262d" filter="url(#sh)"/>
+<rect x="901.7142857142857" y="156" width="187.42857142857142" height="176" rx="13" fill="none" stroke="#3274D9" stroke-width="1" stroke-opacity="0.45"/>
+<circle cx="921.7142857142857" cy="190" r="17" fill="#3274D9"/>
+<text x="921.7142857142857" y="195" font-size="15" font-weight="800" fill="#111217" text-anchor="middle">5</text>
+<text x="917.7142857142857" y="234" font-size="15" font-weight="700" fill="#ECEDED">Coordinate</text>
+<text x="917.7142857142857" y="264" font-size="11.5" fill="#9AA0AA">roles · timeline · tasks</text>
+<text x="917.7142857142857" y="282" font-size="11.5" fill="#9AA0AA">auto-created Slack war room</text>
+<rect x="1117.142857142857" y="156" width="187.42857142857142" height="176" rx="13" fill="#23262d" filter="url(#sh)"/>
+<rect x="1117.142857142857" y="156" width="187.42857142857142" height="176" rx="13" fill="none" stroke="#3274D9" stroke-width="1" stroke-opacity="0.45"/>
+<circle cx="1137.142857142857" cy="190" r="17" fill="#3274D9"/>
+<text x="1137.142857142857" y="195" font-size="15" font-weight="800" fill="#111217" text-anchor="middle">6</text>
+<text x="1133.142857142857" y="234" font-size="15" font-weight="700" fill="#ECEDED">Resolve</text>
+<text x="1133.142857142857" y="264" font-size="11.5" fill="#9AA0AA">resolve group + incident</text>
+<text x="1133.142857142857" y="282" font-size="11.5" fill="#9AA0AA">+ resolution note</text>
+<rect x="1332.5714285714284" y="156" width="187.42857142857142" height="176" rx="13" fill="#23262d" filter="url(#sh)"/>
+<rect x="1332.5714285714284" y="156" width="187.42857142857142" height="176" rx="13" fill="none" stroke="#3274D9" stroke-width="1" stroke-opacity="0.45"/>
+<circle cx="1352.5714285714284" cy="190" r="17" fill="#3274D9"/>
+<text x="1352.5714285714284" y="195" font-size="15" font-weight="800" fill="#111217" text-anchor="middle">7</text>
+<text x="1348.5714285714284" y="234" font-size="15" font-weight="700" fill="#ECEDED">Retrospect</text>
+<text x="1348.5714285714284" y="264" font-size="11.5" fill="#9AA0AA">post-incident review</text>
+<text x="1348.5714285714284" y="282" font-size="11.5" fill="#9AA0AA">MTTR / MTTA in Insights</text>
+<line x1="232.42857142857142" y1="244.0" x2="241.42857142857142" y2="244.0" stroke="#F46800" stroke-width="2.6"/>
+<path d="M 240.42857142857142 238.0 L 240.42857142857142 250.0 L 250.42857142857142 244.0 Z" fill="#F46800"/>
+<line x1="447.85714285714283" y1="244.0" x2="456.85714285714283" y2="244.0" stroke="#F46800" stroke-width="2.6"/>
+<path d="M 455.85714285714283 238.0 L 455.85714285714283 250.0 L 465.85714285714283 244.0 Z" fill="#F46800"/>
+<line x1="663.2857142857142" y1="244.0" x2="672.2857142857142" y2="244.0" stroke="#3274D9" stroke-width="2.6"/>
+<path d="M 671.2857142857142 238.0 L 671.2857142857142 250.0 L 681.2857142857142 244.0 Z" fill="#3274D9"/>
+<line x1="878.7142857142857" y1="244.0" x2="887.7142857142857" y2="244.0" stroke="#3274D9" stroke-width="2.6"/>
+<path d="M 886.7142857142857 238.0 L 886.7142857142857 250.0 L 896.7142857142857 244.0 Z" fill="#3274D9"/>
+<line x1="1094.142857142857" y1="244.0" x2="1103.142857142857" y2="244.0" stroke="#3274D9" stroke-width="2.6"/>
+<path d="M 1102.142857142857 238.0 L 1102.142857142857 250.0 L 1112.142857142857 244.0 Z" fill="#3274D9"/>
+<line x1="1309.5714285714284" y1="244.0" x2="1318.5714285714284" y2="244.0" stroke="#3274D9" stroke-width="2.6"/>
+<path d="M 1317.5714285714284 238.0 L 1317.5714285714284 250.0 L 1327.5714285714284 244.0 Z" fill="#3274D9"/>
+<line x1="672.2857142857142" y1="142" x2="672.2857142857142" y2="346" stroke="#9AA0AA" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.6"/>
+<text x="40.0" y="134" font-size="11" font-weight="700" fill="#F46800">SHARED · EVERY PAGE STARTS HERE</text>
+<text x="686.2857142857142" y="134" font-size="11" font-weight="700" fill="#3274D9">WITH GRAFANA INCIDENT</text>
+<text x="48" y="378" font-size="12.5" fill="#9AA0AA">Acknowledge fast — it pauses escalation and signals you&#x27;re on it.  Phone keypress:  1 acknowledge · 2 resolve · 3 silence 30 min · 4 repeat.</text>
+<text x="48" y="400" font-size="12.5" fill="#9AA0AA">Silencing is time-limited and keeps the group open. Always add a resolution note when you resolve.</text>
+<text x="48" y="422" font-size="12.5" fill="#9AA0AA">Significant, multi-team, or customer-facing? Declare an incident and coordinate it in Grafana Incident.</text>
+</svg>
