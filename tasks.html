@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tasks — Grafana IRM Best Practices</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#2b2d31; --bg-light:#313339; --bg-lighter:#383a41;
+  --shadow-dark:#1c1d20; --shadow-light:#3a3d44;
+  --accent-1:#f46800; --accent-2:#ff9830;
+  --ok:#33c17f; --warn:#ffb020;
+  --text-primary:#eceded; --text-secondary:#b9bdc5; --text-dim:#9298a2;
+  --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+  --radius-lg:24px; --radius-md:16px; --radius-sm:10px;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.4),0 4px 10px rgba(0,0,0,.28);
+  --shadow-md:0 2px 4px rgba(0,0,0,.42),0 12px 28px rgba(0,0,0,.32);
+  --shadow-lg:0 4px 8px rgba(0,0,0,.42),0 22px 48px rgba(0,0,0,.36);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text-primary);
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  font-size:15px;line-height:1.65;}
+.raised{background:var(--bg-light);box-shadow:var(--shadow-md);}
+.inset{background:var(--bg-light);box-shadow:inset 3px 3px 6px rgba(0,0,0,.45);}
+.flat-raised{background:var(--bg-light);box-shadow:var(--shadow-sm);}
+a{color:inherit;text-decoration:none;}
+code,pre{font-family:var(--mono);}
+.content a{color:#ffb37a;text-decoration:none;border-bottom:1px solid rgba(255,179,122,.25);}
+.content a:hover{border-bottom-color:#ffb37a;}
+
+.topbar{display:flex;align-items:center;gap:20px;padding:16px 28px;
+  background:var(--bg-light);box-shadow:0 4px 4px rgba(0,0,0,.3),0 12px 24px rgba(0,0,0,.3);
+  position:sticky;top:0;z-index:10;}
+.logo{height:40px;display:flex;align-items:center;justify-content:center;
+  text-decoration:none;transition:transform .15s;}
+.logo:hover{transform:scale(1.06);}
+.logo .glogo,.glogo{height:34px;width:auto;display:block;}
+.product-name{font-weight:700;font-size:15px;}
+.product-sub{font-size:11px;color:var(--text-dim);}
+.topbar-spacer{flex:1;}
+.top-actions{display:flex;align-items:center;gap:12px;margin-left:auto;}
+.version-pill{font-size:11px;padding:6px 12px;border-radius:20px;color:#ff8a5c;
+  display:flex;align-items:center;gap:6px;box-shadow:var(--shadow-sm);}
+
+.layout{display:grid;grid-template-columns:266px 1fr 220px;gap:32px;
+  max-width:1320px;margin:0 auto;padding:32px 28px 96px;align-items:start;}
+.sidebar{position:sticky;top:92px;padding:18px;border-radius:var(--radius-md);
+  max-height:calc(100vh - 120px);overflow-y:auto;}
+.nav-group+.nav-group{margin-top:22px;}
+.nav-group-title{font-size:10px;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--text-dim);margin-bottom:10px;padding:0 10px;font-weight:700;}
+.nav-link{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;
+  font-size:13.5px;color:var(--text-secondary);margin-bottom:2px;transition:background .15s;}
+.nav-link:hover{background:var(--bg-lighter);}
+.nav-link .dot-marker{width:5px;height:5px;border-radius:50%;background:var(--text-dim);flex-shrink:0;}
+.nav-link.active{color:#fff;background:var(--bg-lighter);box-shadow:inset 2px 2px 5px rgba(0,0,0,.4);}
+.nav-link.active .dot-marker{background:var(--accent-1);}
+
+.content{min-width:0;}
+.breadcrumb{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);margin-bottom:18px;}
+.breadcrumb .sep{opacity:.5;}
+.breadcrumb .current{color:var(--text-secondary);}
+.content h1{font-size:32px;font-weight:800;letter-spacing:-.02em;margin-bottom:10px;}
+.lede{color:var(--text-secondary);font-size:15.5px;max-width:720px;margin-bottom:28px;}
+.content h2{font-size:20px;font-weight:700;margin:38px 0 14px;scroll-margin-top:100px;
+  display:flex;align-items:center;gap:10px;}
+.content h2 .anchor{color:var(--text-dim);font-size:13px;font-weight:400;opacity:0;transition:opacity .15s;}
+.content h2:hover .anchor{opacity:1;}
+.content h3{font-size:15.5px;font-weight:700;margin:24px 0 10px;color:var(--text-primary);scroll-margin-top:100px;}
+.content p{color:var(--text-secondary);margin-bottom:14px;max-width:720px;}
+.content p code,.content li code,.content td code{font-family:var(--mono);font-size:13px;
+  background:var(--bg-lighter);padding:2px 6px;border-radius:5px;color:#ffb37a;
+  box-shadow:inset 1px 1px 3px var(--shadow-dark);}
+.divider{border:none;border-top:1px solid rgba(255,255,255,.06);margin:30px 0;max-width:720px;}
+.diagram{margin:0 0 24px;padding:14px;border-radius:var(--radius-md);background:#111217;overflow:auto;box-shadow:var(--shadow-lg);}
+.diagram svg{width:100%;height:auto;display:block;}
+.diagram img{width:100%;height:auto;display:block;}
+.diagram figcaption{font-size:12px;color:var(--text-dim);margin-top:10px;text-align:center;}
+
+.doc-list{margin:0 0 16px 4px;max-width:720px;}
+.doc-list li{color:var(--text-secondary);margin:0 0 7px 20px;padding-left:4px;}
+.doc-list li::marker{color:var(--accent-1);}
+
+.checklist{list-style:none;max-width:720px;margin-bottom:16px;
+  display:grid;gap:8px;}
+.check-item{display:flex;align-items:flex-start;gap:12px;
+  padding:11px 14px;border-radius:12px;background:var(--bg-light);box-shadow:var(--shadow-sm);
+  color:var(--text-secondary);font-size:13.5px;}
+.checkbox{width:18px;height:18px;border-radius:6px;flex-shrink:0;margin-top:1px;
+  background:var(--bg-lighter);box-shadow:inset 1px 1px 3px var(--shadow-dark);}
+.checkbox.checked{background:linear-gradient(135deg,var(--accent-1),var(--accent-2));box-shadow:var(--shadow-sm);}
+
+.code-block{border-radius:var(--radius-md);overflow:hidden;margin-bottom:20px;box-shadow:var(--shadow-lg);}
+.code-head{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;
+  background:var(--bg-lighter);box-shadow:inset 0 -2px 4px rgba(0,0,0,.2);}
+.code-head .fname{font-size:11.5px;color:var(--text-dim);font-family:var(--mono);}
+.copy-btn{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-secondary);
+  padding:5px 10px;border-radius:8px;border:none;background:var(--bg-light);cursor:pointer;box-shadow:var(--shadow-sm);}
+.copy-btn svg{width:12px;height:12px;}
+.code-body{padding:18px 20px;font-size:12.5px;color:#d6d8dc;overflow-x:auto;line-height:1.55;white-space:pre;}
+.code-body .c-key{color:#ff8a5c;}
+.code-body .c-str{color:#8fd08f;}
+.code-body .c-com{color:#9aa0aa;font-style:italic;}
+.code-body .c-fn{color:#7fb6ff;}
+
+.callout{display:flex;gap:14px;padding:16px 18px;border-radius:var(--radius-md);margin-bottom:20px;max-width:720px;}
+.callout .icon{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.callout .icon svg{width:15px;height:15px;}
+.callout .body .title{font-weight:700;font-size:13px;margin-bottom:3px;}
+.callout .body p{margin:0;font-size:13px;color:var(--text-secondary);}
+.callout.info{border-left:3px solid #7fb6ff;box-shadow:var(--shadow-md),0 10px 26px rgba(127,182,255,.10);}
+.callout.info .icon{background:rgba(127,182,255,.15);color:#7fb6ff;}
+.callout.info .title{color:#7fb6ff;}
+.callout.warn{border-left:3px solid var(--warn);box-shadow:var(--shadow-md),0 10px 26px rgba(255,176,32,.10);}
+.callout.warn .icon{background:rgba(255,176,32,.15);color:var(--warn);}
+.callout.warn .title{color:var(--warn);}
+.callout.danger{border-left:3px solid var(--accent-1);box-shadow:var(--shadow-md),0 10px 26px rgba(244,104,0,.12);}
+.callout.danger .icon{background:linear-gradient(135deg,var(--accent-1),var(--accent-2));color:#fff;}
+.callout.danger .title{color:#ff8a5c;}
+
+.table-wrap{border-radius:var(--radius-md);overflow:hidden;margin-bottom:24px;box-shadow:var(--shadow-lg);max-width:100%;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead{background:var(--bg-lighter);}
+th{text-align:left;padding:12px 16px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);font-weight:700;}
+td{padding:12px 16px;color:var(--text-secondary);border-top:1px solid rgba(255,255,255,.04);vertical-align:top;}
+
+.pager{display:flex;justify-content:space-between;gap:16px;margin-top:48px;}
+.pager-card{flex:1;padding:16px 18px;border-radius:var(--radius-md);display:flex;flex-direction:column;gap:4px;}
+.pager-card.next{text-align:right;align-items:flex-end;}
+.pager-label{font-size:10.5px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em;}
+.pager-title{font-size:14px;font-weight:600;color:var(--text-primary);}
+.pager-card.empty{visibility:hidden;}
+
+.toc{position:sticky;top:92px;padding:18px 16px;border-radius:var(--radius-md);
+  max-height:calc(100vh - 120px);overflow-y:auto;}
+.toc-title{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:12px;font-weight:700;}
+.toc-link{display:block;font-size:12.5px;color:var(--text-dim);padding:6px 10px;
+  border-left:2px solid transparent;margin-bottom:2px;line-height:1.4;}
+.toc-link:hover{color:var(--text-secondary);}
+.toc-link.active{color:var(--text-primary);border-left:2px solid var(--accent-1);
+  background:var(--bg-lighter);border-radius:0 8px 8px 0;}
+.toc-link.sub{padding-left:20px;font-size:12px;}
+
+@media (max-width:980px){
+  .layout{grid-template-columns:1fr;}
+  .sidebar,.toc{position:static;max-height:none;}
+  aside.rail{display:none;}
+}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="logo" href="index.html" aria-label="Grafana Labs — back to all guides"><svg class="glogo" viewBox="0 0 222 60" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Grafana Labs"><title>Grafana Labs</title><defs><linearGradient id="gflogo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF23F"/><stop offset="0.38" stop-color="#FBB040"/><stop offset="1" stop-color="#F05A28"/></linearGradient></defs><g fill="url(#gflogo)" transform="translate(0,-3)"><path d="M31 4 C 28 10 29.5 15 27 18.5 C 25.2 15.5 25 12.8 25.6 10.4 C 20.5 14 18 21.5 21 28 C 23.2 32.6 27.4 35 31 35 C 35.6 35 40 32.2 41.6 27.4 C 43.2 22.4 41 16.5 36.6 13.4 C 37.4 16.6 36.8 19 34.8 20.8 C 36.4 15.6 34.6 8.6 31 4 Z"/><path d="M18.5 38 h23 a2.5 2.5 0 0 1 2.5 2.5 a4 4 0 0 1 -4 4 h-22.5 a4 4 0 0 1 -4 -4 a2.5 2.5 0 0 1 2.5 -2.5 Z"/><path d="M24.5 47 h11 v5.5 a5.5 5.5 0 0 1 -11 0 Z"/></g><text x="56" y="39" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="29" font-weight="700" letter-spacing="-0.5" fill="#FFFFFF">Grafana Labs</text></svg></a>
+    <div>
+      <div class="product-name">IRM</div>
+      <div class="product-sub">Best Practices</div>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="top-actions">
+      <div class="version-pill flat-raised">Grafana Cloud IRM</div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <aside class="sidebar raised">
+      <div class="nav-group"><div class="nav-group-title">On-Call</div>
+<a class="nav-link" href="on-call-schedules.html"><span class="dot-marker"></span>On-Call Schedules</a>
+<a class="nav-link" href="escalation-chains.html"><span class="dot-marker"></span>Escalation Chains</a>
+</div>
+<div class="nav-group"><div class="nav-group-title">Alert Sources</div>
+<a class="nav-link" href="integrations.html"><span class="dot-marker"></span>Integrations</a>
+</div>
+<div class="nav-group"><div class="nav-group-title">Incidents</div>
+<a class="nav-link" href="incident-management.html"><span class="dot-marker"></span>Incident Management</a>
+<a class="nav-link active" href="tasks.html"><span class="dot-marker"></span>Tasks</a>
+</div>
+<div class="nav-group"><div class="nav-group-title">Measure &amp; Improve</div>
+<a class="nav-link" href="insights.html"><span class="dot-marker"></span>Insights</a>
+</div>
+<div class="nav-group"><div class="nav-group-title">Administer</div>
+<a class="nav-link" href="settings.html"><span class="dot-marker"></span>Settings</a>
+<a class="nav-link" href="alert-fatigue.html"><span class="dot-marker"></span>Reducing Alert Fatigue</a>
+</div>
+<div class="nav-group"><div class="nav-group-title">Responder Setup</div>
+<a class="nav-link" href="notification-setup.html"><span class="dot-marker"></span>Responder Notification Setup</a>
+<a class="nav-link" href="responder-playbook.html"><span class="dot-marker"></span>Responder Playbook</a>
+</div>
+    </aside>
+
+    <main class="content">
+      <div class="breadcrumb">
+        <span><a href="index.html">Guides</a></span><span class="sep">/</span>
+        <span>Incidents</span><span class="sep">/</span>
+        <span class="current">Tasks</span>
+      </div>
+      <h1>Tasks</h1>
+      <p class="lede">A practical guide to coordinating action items during and after an incident with Grafana Cloud IRM Tasks — creation, ownership, status tracking, GitHub/Jira follow-through, and the API. Part of the IRM enablement series, closely tied to <a href="incident-management.html">Incident Management</a>.</p>
+      <hr class="divider">
+<h2 id="1-what-tasks-are">1. What Tasks are<span class="anchor">#1-what-tasks-are</span></h2>
+<p>Tasks are Grafana IRM's built-in action-item tracker for incidents. They help you organize, assign, and track the specific steps needed to resolve an incident, so responders can be sure nothing falls through the cracks. Each task has a short description, a single assignee, and a status.</p>
+<p>They live in the <strong>Tasks section of the right-hand sidebar</strong> on the incident details page, and can be created and managed from within the incident's Slack channel. Alongside the timeline, tasks form the permanent record of what was done during an incident — and the mechanism for carrying remediation work forward afterward.</p>
+<p>Use tasks to track remediation steps, assign responsibility, monitor progress, and record the actions taken. Converting tasks to GitHub or Jira issues carries the durable follow-up work into your engineering backlog.</p>
+<h2 id="2-creating-tasks">2. Creating tasks<span class="anchor">#2-creating-tasks</span></h2>
+<p>There are several entry points, so you can capture an action item wherever the conversation is happening:</p>
+<ul class="doc-list"><li><strong>Tasks sidebar</strong> — type an action-oriented description in the Tasks field and click <strong>+Task</strong>.</li><li><strong>Slack slash command</strong> — <code>/grafana incident tasks add &lt;task&gt;</code>, or assign at creation with <code>/grafana incident tasks add &lt;task&gt; @user</code>.</li><li><strong>Slack action button</strong> — type <code>/grafana</code> in the incident channel and click <strong>Add task</strong>.</li><li><strong>💡 bulb emoji</strong> — react to any message in the incident Slack channel with 💡 (<code>:bulb:</code>) to turn it into a task (a post-incident-review action item) without leaving the conversation.</li><li><strong>Paste a GitHub issue URL</strong> — paste an issue link into the Tasks field and click <strong>+Task</strong>; it appears as a task with its status synced from GitHub.</li></ul>
+<p>A task carries a description (<code>text</code>), an optional single <strong>assignee</strong>, and a <strong>status</strong>. There is no separate due-date or priority field, so keep the description specific and self-contained.</p>
+<h2 id="3-statuses-assignment-and-lifecycle">3. Statuses, assignment, and lifecycle<span class="anchor">#3-statuses-assignment-and-lifecycle</span></h2>
+<p>Tasks move through three statuses. Click the status icon to cycle it forward:</p>
+<div class="table-wrap raised"><table><thead><tr><th>Status</th><th>Icon</th><th>Meaning</th></tr></thead><tbody><tr><td>Todo</td><td>☐</td><td>Created, but work hasn't started</td></tr><tr><td>In Progress</td><td>🕜</td><td>Work has begun but isn't complete</td></tr><tr><td>Done</td><td>✔️</td><td>Completed</td></tr></tbody></table></div>
+<p>The icon cycles <strong>Todo → In Progress → Done → Todo</strong>. Assign a task by clicking the <strong>+ people</strong> icon and selecting a user; reassign or unassign by clicking the current assignee. Every task has exactly <strong>one</strong> assignee — that single-owner model is deliberate and worth preserving.</p>
+<p>Some tasks are system-created (for example, role-assignment tasks) and are marked immutable — they can't be edited or reassigned.</p>
+<h2 id="4-github-and-jira-follow-through">4. GitHub and Jira follow-through<span class="anchor">#4-github-and-jira-follow-through</span></h2>
+<p>An incident ends, but the remediation work often doesn't. Converting tasks to issues moves that work into the tools your engineers already live in, and keeps it alive after the incident channel is archived.</p>
+<div class="callout danger raised"><div class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21h22L12 2zm1 15h-2v-2h2v2zm0-4h-2V9h2v4z"/></svg></div><div class="body"><div class="title">GitHub Issues.</div><p>From a task's menu (⋯), choose <strong>Convert to GitHub Issue</strong>, enter <code>organization/repository</code>, add a description, and confirm — the task now links to the issue and shows its live GitHub status. You can also <strong>Link to</strong> an existing issue, or create a task by pasting an issue URL. <strong>Unlinking</strong> only removes the issue from the incident's task list; it never modifies or deletes the GitHub issue itself. Setup needs the IRM Admin role plus GitHub admin rights to install the Grafana IRM GitHub app and pick which repositories to connect.</p></div></div>
+<div class="callout info raised"><div class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg></div><div class="body"><div class="title">Jira.</div><p>From a task's menu, <strong>Convert to Jira Issue</strong> (or <strong>Link to</strong> an existing one). Jira status syncs with the issue, and the Jira integration can auto-create an issue when an incident is declared and update its status as the incident progresses. Two constraints to know: it's <strong>Jira Cloud only</strong>, and IRM sends only four fields on creation — Summary, Description, Project, and Issue Type — so issue creation will fail if your Jira project requires other mandatory fields. Trim those required fields or pre-fill them in Jira.</p></div></div>
+<h2 id="5-capturing-action-items-in-the-moment">5. Capturing action items in the moment<span class="anchor">#5-capturing-action-items-in-the-moment</span></h2>
+<p>The best incident notes are the ones you don't have to reconstruct afterward. During the incident:</p>
+<ul class="doc-list"><li>Use the <strong>💡 reaction</strong> in Slack to capture decisions and follow-ups as tasks the instant they're mentioned — no app switching, no "we'll write it down later."</li><li>Assign an owner at creation (<code>/grafana incident tasks add "deploy hotfix" @bob</code>) so accountability is set immediately.</li><li>Keep the incident commander's view current by updating statuses as work progresses — status is how the whole room reads overall progress.</li><li>Use <code>/grafana incident tasks list</code> to review the open task list at any point, especially before moving to resolve the incident.</li></ul>
+<h2 id="6-post-incident-follow-through">6. Post-incident follow-through<span class="anchor">#6-post-incident-follow-through</span></h2>
+<p>Tasks bridge the live incident and the retrospective. Action items captured with 💡 become the raw material of the post-incident review. Before you resolve an incident, review the task list so nothing open is silently lost when the channel archives (the incident Slack channel auto-archives after a configurable window — commonly 30–60 days — with a 24-hour warning). For anything that outlives the incident, convert it to a GitHub or Jira issue so it lands in a durable backlog rather than a channel that will disappear.</p>
+<h2 id="7-best-practices">7. Best practices<span class="anchor">#7-best-practices</span></h2>
+<ul class="doc-list"><li><strong>Write clear, actionable descriptions.</strong> "Restart the database cluster in us-west" beats "Fix database." A task should read like a checklist item someone can pick up cold.</li><li><strong>Assign a single owner.</strong> One assignee per task is the model — use it to make accountability unambiguous. Shared ownership is no ownership.</li><li><strong>Update statuses in real time.</strong> The commander and the room read progress from task status; stale statuses hide risk.</li><li><strong>Capture in the moment.</strong> Use 💡 in Slack to log action items as they're discussed, not after.</li><li><strong>Keep tasks atomic.</strong> Break multi-step work into separate tasks rather than one sprawling item.</li><li><strong>Review before resolving.</strong> Walk the open task list before closing the incident; nothing important should be left in Todo.</li><li><strong>Push durable work to an issue tracker.</strong> Convert follow-ups to GitHub/Jira so they survive channel archival and enter the normal engineering workflow.</li></ul>
+<h2 id="8-roles-and-permissions">8. Roles and permissions<span class="anchor">#8-roles-and-permissions</span></h2>
+<p>Tasks use <strong>basic-role authorization, not RBAC</strong> — the same as the rest of incident management. Creating, editing, and assigning tasks requires the <strong>Editor</strong> or <strong>Admin</strong> basic role; <strong>Viewers</strong> have read-only access. Setting up the GitHub or Jira integrations additionally requires the IRM <strong>Admin</strong> role plus admin rights in the respective external tool. RBAC roles don't change task permissions, so plan access at the basic-role level for responders who need to manage tasks.</p>
+<h2 id="9-tasks-as-code-the-incident-api">9. Tasks as code (the Incident API)<span class="anchor">#9-tasks-as-code-the-incident-api</span></h2>
+<p>There is <strong>no Terraform resource for incident tasks</strong> — incidents and their tasks are managed only through the Incident API. That said, tasks are fully scriptable, which is useful for automations like seeding a standard checklist of tasks onto every incident of a given type.</p>
+<p>The Incident API is JSON-over-HTTP RPC: every call is an HTTP <code>POST</code> to <code>{base}/{Service}.{Method}</code>.</p>
+<ul class="doc-list"><li><strong>Base:</strong> <code>https://your-stack.grafana.net/api/plugins/grafana-irm-app/resources/api/v1</code></li><li><strong>Auth:</strong> <code>Authorization: Bearer glsa_...</code> (a Grafana service account token)</li><li><strong>Content-Type:</strong> <code>application/json; charset=utf-8</code></li></ul>
+<p><code>TasksService</code> exposes five methods:</p>
+<div class="table-wrap raised"><table><thead><tr><th>Method</th><th>Key fields</th><th>Purpose</th></tr></thead><tbody><tr><td><code>AddTask</code></td><td><code>incidentID</code>, <code>text</code>, <code>assignToUserID</code></td><td>Create a task</td></tr><tr><td><code>UpdateTaskStatus</code></td><td><code>incidentID</code>, <code>taskID</code>, <code>status</code> (<code>todo</code>/<code>progress</code>/<code>done</code>)</td><td>Move a task's status</td></tr><tr><td><code>UpdateTaskText</code></td><td><code>incidentID</code>, <code>taskID</code>, <code>text</code></td><td>Edit the description</td></tr><tr><td><code>UpdateTaskUser</code></td><td><code>incidentID</code>, <code>taskID</code>, <code>userID</code></td><td>Reassign the task</td></tr><tr><td><code>DeleteTask</code></td><td><code>incidentID</code>, <code>taskID</code></td><td>Remove the task</td></tr></tbody></table></div>
+<p>Note the surface: assignment is <code>UpdateTaskUser</code> (there is no <code>AssignTask</code>), removal is <code>DeleteTask</code>, and there's no standalone task-query RPC — tasks come back embedded in each response's <code>taskList</code> (which also carries <code>todoCount</code> and <code>doneCount</code>) and via incident queries.</p>
+<p>Create a task:</p>
+<div class="code-block raised"><div class="code-head"><span class="fname">bash</span><button class="copy-btn flat-raised" onclick="copyCode(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>Copy</button></div><pre class="code-body"><span class="c-fn">curl</span> <span class="c-str">"https://your-stack.grafana.net/api/plugins/grafana-irm-app/resources/api/v1/TasksService.AddTask"</span> \
+  --request <span class="c-key">POST</span> \
+  --header 'Content-Type: application/json; charset=utf-8' \
+  --header 'Authorization: Bearer glsa_...' \
+  --<span class="c-key">data</span> '{
+    <span class="c-str">"incidentID"</span>: <span class="c-str">"incident-123"</span>,
+    <span class="c-str">"text"</span>: <span class="c-str">"Restart database cluster in us-west region"</span>,
+    <span class="c-str">"assignToUserID"</span>: <span class="c-str">"user-456"</span>
+  }'</pre></div>
+<p>Move it to done:</p>
+<div class="code-block raised"><div class="code-head"><span class="fname">bash</span><button class="copy-btn flat-raised" onclick="copyCode(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>Copy</button></div><pre class="code-body"><span class="c-fn">curl</span> <span class="c-str">"https://your-stack.grafana.net/api/plugins/grafana-irm-app/resources/api/v1/TasksService.UpdateTaskStatus"</span> \
+  --request <span class="c-key">POST</span> \
+  --header 'Content-Type: application/json; charset=utf-8' \
+  --header 'Authorization: Bearer glsa_...' \
+  --<span class="c-key">data</span> '{<span class="c-str">"incidentID"</span>:<span class="c-str">"incident-123"</span>,<span class="c-str">"taskID"</span>:<span class="c-str">"task-789"</span>,<span class="c-str">"status"</span>:<span class="c-str">"done"</span>}'</pre></div>
+<p>An official Go client (<code>github.com/grafana/incident-go</code>) is available, and outgoing webhooks emit task activity kinds — <code>taskAdded</code>, <code>taskUpdated</code>, <code>taskCompleted</code>, <code>taskDeleted</code> — which you can use to mirror tasks into external systems.</p>
+<h3 id="as-code-best-practices">As-code best practices</h3>
+<ul class="doc-list"><li><strong>Seed standard checklists.</strong> Script <code>AddTask</code> calls to stamp a consistent set of action items onto incidents of a given type or severity (e.g. "post status page update", "notify account team").</li><li><strong>Mirror with webhooks.</strong> Use the <code>task*</code> activity kinds to sync tasks outward to a system of record if you need one beyond GitHub/Jira.</li><li><strong>Least-privilege tokens.</strong> Use a scoped service account token for task automation, and keep the automation code in Git with review.</li></ul>
+<h2 id="10-quick-reference-checklist">10. Quick reference checklist<span class="anchor">#10-quick-reference-checklist</span></h2>
+<ul class="checklist"><li class="check-item"><span class="checkbox "></span><span>Responders who manage tasks have Editor or Admin basic roles</span></li><li class="check-item"><span class="checkbox "></span><span>GitHub and/or Jira integration installed (Admin role) if you want follow-through sync</span></li><li class="check-item"><span class="checkbox "></span><span>Team knows the 💡 Slack reaction captures a task in the moment</span></li><li class="check-item"><span class="checkbox "></span><span>Task descriptions are specific and actionable</span></li><li class="check-item"><span class="checkbox "></span><span>Every task has a single owner assigned</span></li><li class="check-item"><span class="checkbox "></span><span>Statuses updated in real time during the incident</span></li><li class="check-item"><span class="checkbox "></span><span>Open task list reviewed before resolving the incident</span></li><li class="check-item"><span class="checkbox "></span><span>Durable follow-ups converted to GitHub/Jira issues before channel archival</span></li><li class="check-item"><span class="checkbox "></span><span>Standard task checklists seeded via the API for recurring incident types (optional)</span></li></ul>
+<h2 id="references">References<span class="anchor">#references</span></h2>
+<ul class="doc-list"><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/manage-incidents/collaborate/manage-tasks/" target="_blank" rel="noopener">Manage incident tasks</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/manage-incidents/collaborate/" target="_blank" rel="noopener">Collaborate during incidents</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/manage-incidents/incident-timeline/" target="_blank" rel="noopener">Incident timeline</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/integrations/chat-and-collaboration/slack/" target="_blank" rel="noopener">Slack integration</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/integrations/dev-and-operations/github/" target="_blank" rel="noopener">GitHub integration</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/integrations/dev-and-operations/jira/" target="_blank" rel="noopener">Jira integration</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/guides/best-practices/incidents/" target="_blank" rel="noopener">Best practices for incidents</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/manage-incidents/resolve-and-learn/" target="_blank" rel="noopener">Resolve and learn from incidents</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/set-up/manage-access/roles-and-permissions/" target="_blank" rel="noopener">Roles and permissions</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/reference/incident-api/" target="_blank" rel="noopener">Incident API reference</a></li></ul>
+<h2 id="related-guides">Related guides<span class="anchor">#related-guides</span></h2>
+<ul class="doc-list"><li><a href="incident-management.html">Incident Management</a> — Declare, coordinate, resolve, and learn from incidents.</li><li><a href="insights.html">Insights</a> — Measure and improve incident response with metrics, dashboards, and audit logs.</li></ul>
+<p>_Part of the Grafana IRM enablement series — each topic also has an enablement deck and an implementation checklist in its folder._</p>
+      <div class="pager">
+        <a class="pager-card prev raised" href="incident-management.html"><div class="pager-label">← Previous</div><div class="pager-title">Incident Management</div></a>
+        <a class="pager-card next raised" href="insights.html"><div class="pager-label">Next →</div><div class="pager-title">Insights</div></a>
+      </div>
+    </main>
+
+    <aside class="rail">
+      <div class="toc raised">
+        <div class="toc-title">On this page</div>
+        <a class="toc-link" href="#1-what-tasks-are" data-target="1-what-tasks-are">1. What Tasks are</a>
+<a class="toc-link" href="#2-creating-tasks" data-target="2-creating-tasks">2. Creating tasks</a>
+<a class="toc-link" href="#3-statuses-assignment-and-lifecycle" data-target="3-statuses-assignment-and-lifecycle">3. Statuses, assignment, and lifecycle</a>
+<a class="toc-link" href="#4-github-and-jira-follow-through" data-target="4-github-and-jira-follow-through">4. GitHub and Jira follow-through</a>
+<a class="toc-link" href="#5-capturing-action-items-in-the-moment" data-target="5-capturing-action-items-in-the-moment">5. Capturing action items in the moment</a>
+<a class="toc-link" href="#6-post-incident-follow-through" data-target="6-post-incident-follow-through">6. Post-incident follow-through</a>
+<a class="toc-link" href="#7-best-practices" data-target="7-best-practices">7. Best practices</a>
+<a class="toc-link" href="#8-roles-and-permissions" data-target="8-roles-and-permissions">8. Roles and permissions</a>
+<a class="toc-link" href="#9-tasks-as-code-the-incident-api" data-target="9-tasks-as-code-the-incident-api">9. Tasks as code (the Incident API)</a>
+<a class="toc-link sub" href="#as-code-best-practices" data-target="as-code-best-practices">As-code best practices</a>
+<a class="toc-link" href="#10-quick-reference-checklist" data-target="10-quick-reference-checklist">10. Quick reference checklist</a>
+<a class="toc-link" href="#references" data-target="references">References</a>
+<a class="toc-link" href="#related-guides" data-target="related-guides">Related guides</a>
+      </div>
+    </aside>
+  </div>
+  <script>
+function copyCode(btn){
+  var pre = btn.closest('.code-block').querySelector('.code-body');
+  navigator.clipboard.writeText(pre.innerText).then(function(){
+    var old = btn.innerHTML; btn.innerHTML = 'Copied'; setTimeout(function(){ btn.innerHTML = old; }, 1200);
+  });
+}
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc-link'));
+  var map = {};
+  links.forEach(function(l){ var id=l.getAttribute('data-target'); if(id) map[id]=l; });
+  var heads = Array.prototype.slice.call(document.querySelectorAll('.content h2, .content h3'));
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){
+        links.forEach(function(l){ l.classList.remove('active'); });
+        var l = map[e.target.id]; if(l) l.classList.add('active');
+      }
+    });
+  }, {rootMargin:'-90px 0px -70% 0px', threshold:0});
+  heads.forEach(function(h){ obs.observe(h); });
+})();
+</script>
+</body>
+</html>

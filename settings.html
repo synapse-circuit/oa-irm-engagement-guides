@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Settings — Grafana IRM Best Practices</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#2b2d31; --bg-light:#313339; --bg-lighter:#383a41;
+  --shadow-dark:#1c1d20; --shadow-light:#3a3d44;
+  --accent-1:#f46800; --accent-2:#ff9830;
+  --ok:#33c17f; --warn:#ffb020;
+  --text-primary:#eceded; --text-secondary:#b9bdc5; --text-dim:#9298a2;
+  --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+  --radius-lg:24px; --radius-md:16px; --radius-sm:10px;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.4),0 4px 10px rgba(0,0,0,.28);
+  --shadow-md:0 2px 4px rgba(0,0,0,.42),0 12px 28px rgba(0,0,0,.32);
+  --shadow-lg:0 4px 8px rgba(0,0,0,.42),0 22px 48px rgba(0,0,0,.36);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text-primary);
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  font-size:15px;line-height:1.65;}
+.raised{background:var(--bg-light);box-shadow:var(--shadow-md);}
+.inset{background:var(--bg-light);box-shadow:inset 3px 3px 6px rgba(0,0,0,.45);}
+.flat-raised{background:var(--bg-light);box-shadow:var(--shadow-sm);}
+a{color:inherit;text-decoration:none;}
+code,pre{font-family:var(--mono);}
+.content a{color:#ffb37a;text-decoration:none;border-bottom:1px solid rgba(255,179,122,.25);}
+.content a:hover{border-bottom-color:#ffb37a;}
+
+.topbar{display:flex;align-items:center;gap:20px;padding:16px 28px;
+  background:var(--bg-light);box-shadow:0 4px 4px rgba(0,0,0,.3),0 12px 24px rgba(0,0,0,.3);
+  position:sticky;top:0;z-index:10;}
+.logo{height:40px;display:flex;align-items:center;justify-content:center;
+  text-decoration:none;transition:transform .15s;}
+.logo:hover{transform:scale(1.06);}
+.logo .glogo,.glogo{height:34px;width:auto;display:block;}
+.product-name{font-weight:700;font-size:15px;}
+.product-sub{font-size:11px;color:var(--text-dim);}
+.topbar-spacer{flex:1;}
+.top-actions{display:flex;align-items:center;gap:12px;margin-left:auto;}
+.version-pill{font-size:11px;padding:6px 12px;border-radius:20px;color:#ff8a5c;
+  display:flex;align-items:center;gap:6px;box-shadow:var(--shadow-sm);}
+
+.layout{display:grid;grid-template-columns:266px 1fr 220px;gap:32px;
+  max-width:1320px;margin:0 auto;padding:32px 28px 96px;align-items:start;}
+.sidebar{position:sticky;top:92px;padding:18px;border-radius:var(--radius-md);
+  max-height:calc(100vh - 120px);overflow-y:auto;}
+.nav-group+.nav-group{margin-top:22px;}
+.nav-group-title{font-size:10px;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--text-dim);margin-bottom:10px;padding:0 10px;font-weight:700;}
+.nav-link{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;
+  font-size:13.5px;color:var(--text-secondary);margin-bottom:2px;transition:background .15s;}
+.nav-link:hover{background:var(--bg-lighter);}
+.nav-link .dot-marker{width:5px;height:5px;border-radius:50%;background:var(--text-dim);flex-shrink:0;}
+.nav-link.active{color:#fff;background:var(--bg-lighter);box-shadow:inset 2px 2px 5px rgba(0,0,0,.4);}
+.nav-link.active .dot-marker{background:var(--accent-1);}
+
+.content{min-width:0;}
+.breadcrumb{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);margin-bottom:18px;}
+.breadcrumb .sep{opacity:.5;}
+.breadcrumb .current{color:var(--text-secondary);}
+.content h1{font-size:32px;font-weight:800;letter-spacing:-.02em;margin-bottom:10px;}
+.lede{color:var(--text-secondary);font-size:15.5px;max-width:720px;margin-bottom:28px;}
+.content h2{font-size:20px;font-weight:700;margin:38px 0 14px;scroll-margin-top:100px;
+  display:flex;align-items:center;gap:10px;}
+.content h2 .anchor{color:var(--text-dim);font-size:13px;font-weight:400;opacity:0;transition:opacity .15s;}
+.content h2:hover .anchor{opacity:1;}
+.content h3{font-size:15.5px;font-weight:700;margin:24px 0 10px;color:var(--text-primary);scroll-margin-top:100px;}
+.content p{color:var(--text-secondary);margin-bottom:14px;max-width:720px;}
+.content p code,.content li code,.content td code{font-family:var(--mono);font-size:13px;
+  background:var(--bg-lighter);padding:2px 6px;border-radius:5px;color:#ffb37a;
+  box-shadow:inset 1px 1px 3px var(--shadow-dark);}
+.divider{border:none;border-top:1px solid rgba(255,255,255,.06);margin:30px 0;max-width:720px;}
+.diagram{margin:0 0 24px;padding:14px;border-radius:var(--radius-md);background:#111217;overflow:auto;box-shadow:var(--shadow-lg);}
+.diagram svg{width:100%;height:auto;display:block;}
+.diagram img{width:100%;height:auto;display:block;}
+.diagram figcaption{font-size:12px;color:var(--text-dim);margin-top:10px;text-align:center;}
+
+.doc-list{margin:0 0 16px 4px;max-width:720px;}
+.doc-list li{color:var(--text-secondary);margin:0 0 7px 20px;padding-left:4px;}
+.doc-list li::marker{color:var(--accent-1);}
+
+.checklist{list-style:none;max-width:720px;margin-bottom:16px;
+  display:grid;gap:8px;}
+.check-item{display:flex;align-items:flex-start;gap:12px;
+  padding:11px 14px;border-radius:12px;background:var(--bg-light);box-shadow:var(--shadow-sm);
+  color:var(--text-secondary);font-size:13.5px;}
+.checkbox{width:18px;height:18px;border-radius:6px;flex-shrink:0;margin-top:1px;
+  background:var(--bg-lighter);box-shadow:inset 1px 1px 3px var(--shadow-dark);}
+.checkbox.checked{background:linear-gradient(135deg,var(--accent-1),var(--accent-2));box-shadow:var(--shadow-sm);}
+
+.code-block{border-radius:var(--radius-md);overflow:hidden;margin-bottom:20px;box-shadow:var(--shadow-lg);}
+.code-head{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;
+  background:var(--bg-lighter);box-shadow:inset 0 -2px 4px rgba(0,0,0,.2);}
+.code-head .fname{font-size:11.5px;color:var(--text-dim);font-family:var(--mono);}
+.copy-btn{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-secondary);
+  padding:5px 10px;border-radius:8px;border:none;background:var(--bg-light);cursor:pointer;box-shadow:var(--shadow-sm);}
+.copy-btn svg{width:12px;height:12px;}
+.code-body{padding:18px 20px;font-size:12.5px;color:#d6d8dc;overflow-x:auto;line-height:1.55;white-space:pre;}
+.code-body .c-key{color:#ff8a5c;}
+.code-body .c-str{color:#8fd08f;}
+.code-body .c-com{color:#9aa0aa;font-style:italic;}
+.code-body .c-fn{color:#7fb6ff;}
+
+.callout{display:flex;gap:14px;padding:16px 18px;border-radius:var(--radius-md);margin-bottom:20px;max-width:720px;}
+.callout .icon{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.callout .icon svg{width:15px;height:15px;}
+.callout .body .title{font-weight:700;font-size:13px;margin-bottom:3px;}
+.callout .body p{margin:0;font-size:13px;color:var(--text-secondary);}
+.callout.info{border-left:3px solid #7fb6ff;box-shadow:var(--shadow-md),0 10px 26px rgba(127,182,255,.10);}
+.callout.info .icon{background:rgba(127,182,255,.15);color:#7fb6ff;}
+.callout.info .title{color:#7fb6ff;}
+.callout.warn{border-left:3px solid var(--warn);box-shadow:var(--shadow-md),0 10px 26px rgba(255,176,32,.10);}
+.callout.warn .icon{background:rgba(255,176,32,.15);color:var(--warn);}
+.callout.warn .title{color:var(--warn);}
+.callout.danger{border-left:3px solid var(--accent-1);box-shadow:var(--shadow-md),0 10px 26px rgba(244,104,0,.12);}
+.callout.danger .icon{background:linear-gradient(135deg,var(--accent-1),var(--accent-2));color:#fff;}
+.callout.danger .title{color:#ff8a5c;}
+
+.table-wrap{border-radius:var(--radius-md);overflow:hidden;margin-bottom:24px;box-shadow:var(--shadow-lg);max-width:100%;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead{background:var(--bg-lighter);}
+th{text-align:left;padding:12px 16px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);font-weight:700;}
+td{padding:12px 16px;color:var(--text-secondary);border-top:1px solid rgba(255,255,255,.04);vertical-align:top;}
+
+.pager{display:flex;justify-content:space-between;gap:16px;margin-top:48px;}
+.pager-card{flex:1;padding:16px 18px;border-radius:var(--radius-md);display:flex;flex-direction:column;gap:4px;}
+.pager-card.next{text-align:right;align-items:flex-end;}
+.pager-label{font-size:10.5px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em;}
+.pager-title{font-size:14px;font-weight:600;color:var(--text-primary);}
+.pager-card.empty{visibility:hidden;}
+
+.toc{position:sticky;top:92px;padding:18px 16px;border-radius:var(--radius-md);
+  max-height:calc(100vh - 120px);overflow-y:auto;}
+.toc-title{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:12px;font-weight:700;}
+.toc-link{display:block;font-size:12.5px;color:var(--text-dim);padding:6px 10px;
+  border-left:2px solid transparent;margin-bottom:2px;line-height:1.4;}
+.toc-link:hover{color:var(--text-secondary);}
+.toc-link.active{color:var(--text-primary);border-left:2px solid var(--accent-1);
+  background:var(--bg-lighter);border-radius:0 8px 8px 0;}
+.toc-link.sub{padding-left:20px;font-size:12px;}
+
+@media (max-width:980px){
+  .layout{grid-template-columns:1fr;}
+  .sidebar,.toc{position:static;max-height:none;}
+  aside.rail{display:none;}
+}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="logo" href="index.html" aria-label="Grafana Labs — back to all guides"><svg class="glogo" viewBox="0 0 222 60" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Grafana Labs"><title>Grafana Labs</title><defs><linearGradient id="gflogo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF23F"/><stop offset="0.38" stop-color="#FBB040"/><stop offset="1" stop-color="#F05A28"/></linearGradient></defs><g fill="url(#gflogo)" transform="translate(0,-3)"><path d="M31 4 C 28 10 29.5 15 27 18.5 C 25.2 15.5 25 12.8 25.6 10.4 C 20.5 14 18 21.5 21 28 C 23.2 32.6 27.4 35 31 35 C 35.6 35 40 32.2 41.6 27.4 C 43.2 22.4 41 16.5 36.6 13.4 C 37.4 16.6 36.8 19 34.8 20.8 C 36.4 15.6 34.6 8.6 31 4 Z"/><path d="M18.5 38 h23 a2.5 2.5 0 0 1 2.5 2.5 a4 4 0 0 1 -4 4 h-22.5 a4 4 0 0 1 -4 -4 a2.5 2.5 0 0 1 2.5 -2.5 Z"/><path d="M24.5 47 h11 v5.5 a5.5 5.5 0 0 1 -11 0 Z"/></g><text x="56" y="39" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="29" font-weight="700" letter-spacing="-0.5" fill="#FFFFFF">Grafana Labs</text></svg></a>
+    <div>
+      <div class="product-name">IRM</div>
+      <div class="product-sub">Best Practices</div>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="top-actions">
+      <div class="version-pill flat-raised">Grafana Cloud IRM</div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <aside class="sidebar raised">
+      <div class="nav-group"><div class="nav-group-title">On-Call</div>
+<a class="nav-link" href="on-call-schedules.html"><span class="dot-marker"></span>On-Call Schedules</a>
+<a class="nav-link" href="escalation-chains.html"><span class="dot-marker"></span>Escalation Chains</a>
+</div>
+<div class="nav-group"><div class="nav-group-title">Alert Sources</div>
+<a class="nav-link" href="integrations.html"><span class="dot-marker"></span>Integrations</a>
+</div>
+<div class="nav-group"><div class="nav-group-title">Incidents</div>
+<a class="nav-link" href="incident-management.html"><span class="dot-marker"></span>Incident Management</a>
+<a class="nav-link" href="tasks.html"><span class="dot-marker"></span>Tasks</a>
+</div>
+<div class="nav-group"><div class="nav-group-title">Measure &amp; Improve</div>
+<a class="nav-link" href="insights.html"><span class="dot-marker"></span>Insights</a>
+</div>
+<div class="nav-group"><div class="nav-group-title">Administer</div>
+<a class="nav-link active" href="settings.html"><span class="dot-marker"></span>Settings</a>
+<a class="nav-link" href="alert-fatigue.html"><span class="dot-marker"></span>Reducing Alert Fatigue</a>
+</div>
+<div class="nav-group"><div class="nav-group-title">Responder Setup</div>
+<a class="nav-link" href="notification-setup.html"><span class="dot-marker"></span>Responder Notification Setup</a>
+<a class="nav-link" href="responder-playbook.html"><span class="dot-marker"></span>Responder Playbook</a>
+</div>
+    </aside>
+
+    <main class="content">
+      <div class="breadcrumb">
+        <span><a href="index.html">Guides</a></span><span class="sep">/</span>
+        <span>Administer</span><span class="sep">/</span>
+        <span class="current">Settings</span>
+      </div>
+      <h1>Settings</h1>
+      <p class="lede">A practical guide to administering Grafana Cloud IRM — access and roles, API tokens, ChatOps, org-level behavior toggles, and incident-response configuration — and to managing as much of it as code as the platform allows. Written for the platform admins who own an IRM stack. Part of the IRM enablement series.</p>
+      <hr class="divider">
+<h2 id="1-what-the-settings-section-is">1. What the Settings section is<span class="anchor">#1-what-the-settings-section-is</span></h2>
+<p>The IRM <strong>Settings</strong> area is the administration hub for an IRM stack, at <strong>Alerts &amp; IRM → IRM → Settings</strong>. It's a tabbed page with three documented tabs:</p>
+<ul class="doc-list"><li><strong>Admin &amp; API</strong> — org-wide behavior toggles, API token management, and the IRM API base URLs.</li><li><strong>Incidents</strong> — the configurable incident-response workflow: severities, statuses, roles, custom fields, and channel prefixes.</li><li><strong>Team Access Management</strong> — per-team visibility and the default team.</li></ul>
+<p>One scoping subtlety worth knowing up front: not everything an admin configures lives under the Settings tab. Several org-level behaviors sit under <strong>IRM → Integrations → Apps → Slack</strong> (incident channel creation, auto-archive, acknowledge reminders), and connecting a chat workspace is done through the Grafana Cloud portal. So "Settings" in the strict sense is those three tabs; "settings" in the everyday admin sense spans those plus the Slack app config and ChatOps connection. This guide covers the whole administrative surface.</p>
+<h2 id="2-access-management-roles">2. Access management: roles<span class="anchor">#2-access-management-roles</span></h2>
+<p>Access is layered: <strong>basic roles</strong> (inherited from Grafana) plus <strong>IRM RBAC roles</strong> (fine-grained, and they don't change the basic role).</p>
+<p><strong>Basic roles:</strong></p>
+<div class="table-wrap raised"><table><thead><tr><th>Role</th><th>IRM access</th></tr></thead><tbody><tr><td>Viewer</td><td>Read-only across IRM</td></tr><tr><td>Editor</td><td>Edit most resources (schedules, alert groups); cannot create integrations, escalation chains, or outgoing webhooks</td></tr><tr><td>Admin</td><td>Full access to all IRM features and settings</td></tr><tr><td>None</td><td>No default access; grant access with an IRM RBAC role</td></tr></tbody></table></div>
+<div class="callout info raised"><div class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg></div><div class="body"><div class="title">Key IRM RBAC roles</div><p>(assigning any of them also grants IRM plugin access):</p></div></div>
+<ul class="doc-list"><li><strong>OnCaller</strong> — read all IRM plus edit alert groups, schedules, and own settings. The role for on-call responders.</li><li><strong>Notifications Receiver</strong> — receive alert notifications and edit own IRM user settings; the minimal responder grant.</li><li><strong>Incident Access</strong> — plugin access for incident workflows only, no OnCall permissions.</li><li><strong>Reader / Editor / Admin</strong> — map to the basic roles.</li><li><strong>Specialized reader/editor roles</strong> for each resource type: Integrations, Escalation Chains, Schedules, ChatOps, Outgoing Webhooks, Maintenance, API Keys, Notification Settings, User Settings (Reader/Editor/<strong>Admin</strong>), and org <strong>Settings</strong> (Reader/Editor).</li></ul>
+<p>Permission strings are prefixed <code>grafana-irm-app.</code> — e.g. <code>grafana-irm-app.schedules:write</code>, <code>grafana-irm-app.other-settings:write</code>, <code>grafana-irm-app.api-keys:write</code>.</p>
+<div class="callout info raised"><div class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg></div><div class="body"><div class="title">Assign roles</div><p>as an org admin: <strong>Administration → Users and access → Users</strong> → select the user → <strong>Role</strong> picker → under <strong>Grafana IRM</strong> pick the role → <strong>Apply</strong>. Roles can also be assigned to teams and via the API/Terraform.</p></div></div>
+<div class="callout warn raised"><div class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg></div><div class="body"><div class="title">Features that don't support RBAC.</div><p>Incidents, Tasks, and Incident settings still use <strong>basic-role authorization only</strong> — RBAC roles don't affect them. Plan for this: managing incident configuration requires the Admin basic role, regardless of RBAC.</p></div></div>
+<h2 id="3-teams-scoping-resources">3. Teams: scoping resources<span class="anchor">#3-teams-scoping-resources</span></h2>
+<p>IRM teams sync from Grafana teams (<strong>Administration → Teams</strong>) roughly every four hours, and immediately when you open or refresh any IRM page. Set team visibility under <strong>Settings → Team Access Management</strong> — either all Grafana users can see the team's resources, or only team members and admins. Admins see all teams; Editors and Viewers see only teams they belong to (unless visibility is "all users"). Cross-team resources appear to non-members as <code>🔒 Private resource</code>. Note that to *manage* a team's resources in IRM you must be a member of that team — even admins add themselves temporarily.</p>
+<p>RBAC decides *what actions* a user can take; team membership decides *which resources* they act on. Combine the two for clean scoping.</p>
+<h2 id="4-api-and-tokens">4. API and tokens<span class="anchor">#4-api-and-tokens</span></h2>
+<p>API access is configured at <strong>Settings → Admin &amp; API</strong>, which shows the auto-provisioned IRM API base URLs and an <strong>API Tokens</strong> section (<strong>Create New Token</strong> → name + permissions; the token is shown once and can't be retrieved later).</p>
+<p>There are two auth methods for the OnCall API:</p>
+<ul class="doc-list"><li><strong>Grafana Cloud service account token (recommended)</strong> — granular, rotatable, centrally managed. Send <code>Authorization: Bearer &lt;token&gt;</code> <strong>and</strong> <code>X-Grafana-URL: https://your-stack.grafana.net</code>.</li><li><strong>Legacy OnCall API key</strong> — user-specific; send <code>Authorization: &lt;key&gt;</code> (no Bearer, no X-Grafana-URL). Only the creating user can see or manage it.</li></ul>
+<p>Service-account token limitations to know: they can't retrieve the caller's own user profile, can't perform state-changing alert-group actions (acknowledge/resolve/silence — use a user token or the UI), and <code>/info</code>, <code>/make_call</code>, <code>/send_sms</code> still require a legacy key. A <code>500</code> usually means the endpoint doesn't accept service-account auth or the token lacks permissions.</p>
+<p>The API is rate-limited to <strong>300 requests per API key per minute</strong>; over-limit calls return HTTP <code>429</code>.</p>
+<div class="callout danger raised"><div class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21h22L12 2zm1 15h-2v-2h2v2zm0-4h-2V9h2v4z"/></svg></div><div class="body"><div class="title">Token best practices</div><p>prefer service-account tokens over personal/legacy keys; grant only the permissions each token needs; store tokens in a secrets manager or Terraform variables, never in source control; rotate them on a schedule; and hand out the API Keys Editor role sparingly, since it also confers the ability to use the API.</p></div></div>
+<h2 id="5-org-level-behavior-toggles-admin-api">5. Org-level behavior toggles (Admin &amp; API)<span class="anchor">#5-org-level-behavior-toggles-admin-api</span></h2>
+<p>These toggles change how the whole stack behaves — set them deliberately and document why:</p>
+<ul class="doc-list"><li><strong>Notification channel visibility</strong> — show/hide channels (Slack, Teams, …) in users' personal notification rules. On by default when an integration is installed. Hiding a channel only removes it from user profiles; it does not disable the integration itself.</li><li><strong>Manually manage direct paging integrations</strong> (<code>manually_manage_direct_paging_integrations</code>) — turn on to stop IRM auto-creating per-team direct-paging integrations so you can manage them as code. Existing integrations are kept. Required before managing <code>direct_paging</code> integrations in Terraform.</li><li><strong>Prefer important notification policy</strong> — direct pages via Slack use the recipient's *important* personal policy rather than default.</li><li><strong>Require resolution notes</strong> (<code>is_resolution_note_required</code>) — responders must add a resolution note before resolving an alert group. Enforced in the UI, Slack, and bulk resolve — but <strong>not</strong> by the public API resolve endpoint.</li><li><strong>Require team membership for updates</strong> — restrict write operations to members of the resource's team, across UI, mobile, Slack, Teams, and API. Bypassed by Admin/IRM-Admin, service accounts, and a user notified for a specific alert group (scoped to that one group). Read access is unaffected.</li><li><strong>Disable schedule updates in the past</strong> — enforce future-only editing of web schedules (no past-dated overrides/swaps; rotation edits only via "Save as new"). Doesn't apply to Terraform/API schedules — use the <code>until</code> parameter there instead.</li></ul>
+<p>Admins also manage users' linked Slack profiles from <strong>IRM → Users</strong> (auto-synced when Grafana and Slack emails match).</p>
+<h2 id="6-chatops-configuration">6. ChatOps configuration<span class="anchor">#6-chatops-configuration</span></h2>
+<p>Chat integrations include Slack, Microsoft Teams, and Telegram. A few placement facts save confusion:</p>
+<ul class="doc-list"><li><strong>Workspace connection is done in the Grafana Cloud portal</strong>, not the Settings tab — install the Grafana Cloud app for Slack, then each user links their account under <strong>Profile → IRM tab → Slack connection</strong>.</li><li>One Slack workspace can serve multiple stacks, but you can't connect multiple workspaces to a single stack.</li><li><strong>Org-level Slack behavior</strong> lives under <strong>IRM → Integrations → Apps → Slack</strong>: incident channel auto-creation, invite-on-create, auto-archive (30–60 days recommended, with a 24-hour warning), the channel name template (default <code>{{ prefix }}-{{ date }}-{{ title }}</code>), acknowledge-reminder and auto-unacknowledge timeouts, and rich link previews. These appear only when Slack is installed.</li></ul>
+<p>Updating ChatOps settings requires the IRM Admin RBAC role (or the ChatOps Editor role); Editor RBAC explicitly can't change them.</p>
+<h2 id="7-incident-response-settings-incidents-tab">7. Incident-response settings (Incidents tab)<span class="anchor">#7-incident-response-settings-incidents-tab</span></h2>
+<p>Configured at <strong>Settings → Incidents</strong> — and because incident features are basic-role only, this needs the <strong>Admin</strong> basic role.</p>
+<ul class="doc-list"><li><strong>Severities</strong> — defaults Critical, Major, Minor, Pending; new incidents default to Pending (configurable). Custom severities have a Label and a numeric Level that is immutable after creation; map custom levels to the defaults (P1→Critical, etc.).</li><li><strong>Statuses</strong> — defaults Active and Resolved; add custom statuses with name, icon, and color; reorder by drag.</li><li><strong>Roles</strong> — defaults Commander and Investigator; add custom roles and flag the critical ones as key roles.</li><li><strong>Custom fields</strong> — Text, Number, Single-select, Multi-select; mark a field Mandatory only when it truly must be completed before resolution.</li><li><strong>Prefixes, announcements, and briefings</strong> — channel prefixes on the Incidents tab; announcements and briefings under customize-incident-response.</li></ul>
+<p>Keep the incident workflow small and meaningful: a handful of clear severities, statuses that mirror your real process, and mandatory fields reserved for the few that matter.</p>
+<h2 id="8-who-can-change-settings">8. Who can change settings<span class="anchor">#8-who-can-change-settings</span></h2>
+<ul class="doc-list"><li><strong>Incidents tab</strong> — Admin basic role (no RBAC path).</li><li><strong>Admin &amp; API / org settings</strong> — IRM Admin RBAC or Admin basic role; fine-grained equivalents are Settings Editor (<code>other-settings:write</code>), ChatOps Editor, API Keys Editor, and User Settings Admin. Editor RBAC cannot change admin settings, ChatOps, or other users' settings.</li><li><strong>Team Access Management</strong> — admins manage all teams, but must be a member of a team to manage its resources.</li><li><strong>Assigning any role</strong> requires Organization Administrator access.</li></ul>
+<h2 id="9-settings-as-code">9. Settings as code<span class="anchor">#9-settings-as-code</span></h2>
+<p>The honest picture of what's codifiable:</p>
+<p><strong>Terraform / OnCall API (<code>grafana_oncall_*</code>):</strong> integrations (including <code>direct_paging</code> once the manual-management toggle is on), escalation chains and steps, routes, schedules and shifts, shift swaps, outgoing webhooks, personal notification rules, and resolution notes. Provider setup uses the <code>grafana/grafana</code> provider (≥ 3.0.0) with an aliased <code>oncall</code> block; look up users with the <code>grafana_oncall_user</code> data source since IRM uses internal user IDs.</p>
+<div class="callout warn raised"><div class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg></div><div class="body"><div class="title">Read-only via API</div><p>users, teams, and organizations (synced from Grafana — reference teams by ID, don't create them here).</p></div></div>
+<div class="callout info raised"><div class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg></div><div class="body"><div class="title">Incident API (separate)</div><p>incident resources and incident configuration.</p></div></div>
+<div class="callout info raised"><div class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg></div><div class="body"><div class="title">UI-only</div><p>ChatOps configuration (Slack/Teams/Telegram) and admin org settings. These can't be Terraformed today, so capture them in written runbooks instead.</p></div></div>
+<p>Service accounts and tokens, and RBAC role assignments, are managed with the broader Grafana provider — typically <code>grafana_service_account</code>, <code>grafana_service_account_token</code>, and role-assignment resources (confirm exact names against the current provider registry). The IRM docs themselves point to the UI flow (Admin &amp; API → Create New Token) for token creation.</p>
+<div class="code-block raised"><div class="code-head"><span class="fname">terraform</span><button class="copy-btn flat-raised" onclick="copyCode(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>Copy</button></div><pre class="code-body"><span class="c-com"># OnCall provider setup (auth prerequisite for managing IRM as code)</span>
+<span class="c-key">provider</span> <span class="c-str">"grafana"</span> {
+  alias               = <span class="c-str">"oncall"</span>
+  url                 = <span class="c-str">"https://your-stack.grafana.net"</span>
+  auth                = var.grafana_sa_token
+  oncall_access_token = var.oncall_token
+}
+
+<span class="c-com"># A least-privilege service account + token for IRM automation</span>
+<span class="c-key">resource</span> <span class="c-str">"grafana_service_account"</span> <span class="c-str">"irm_ci"</span> {
+  name = <span class="c-str">"irm-terraform"</span>
+  role = <span class="c-str">"Editor"</span>
+}
+
+<span class="c-key">resource</span> <span class="c-str">"grafana_service_account_token"</span> <span class="c-str">"irm_ci"</span> {
+  name               = <span class="c-str">"irm-terraform-token"</span>
+  service_account_id = grafana_service_account.irm_ci.id
+}</pre></div>
+<h3 id="as-code-best-practices">As-code best practices</h3>
+<ul class="doc-list"><li><strong>Version everything codifiable</strong> in Git with PR review; keep a separate Terraform workspace per environment (dev/staging/prod) and a remote state backend.</li><li><strong>Document the UI-only settings</strong> (ChatOps, admin toggles, incident workflow) in a runbook so the full configuration is reproducible even where Terraform can't reach.</li><li><strong>Store tokens securely</strong> (secrets manager / TF variables), rotate them, and scope service accounts to least privilege.</li><li><strong>Validate in CI</strong> (<code>terraform validate</code> / <code>plan</code> on every PR) and apply after approval.</li></ul>
+<h2 id="10-quick-reference-checklist">10. Quick reference checklist<span class="anchor">#10-quick-reference-checklist</span></h2>
+<ul class="checklist"><li class="check-item"><span class="checkbox "></span><span>Responders assigned OnCaller (or Notifications Receiver); Admin reserved for settings owners</span></li><li class="check-item"><span class="checkbox "></span><span>User roles reviewed/audited against current responsibilities</span></li><li class="check-item"><span class="checkbox "></span><span>Team visibility set intentionally; "Require team membership for updates" considered</span></li><li class="check-item"><span class="checkbox "></span><span>Service-account tokens used (not personal keys), scoped, stored securely, rotated</span></li><li class="check-item"><span class="checkbox "></span><span>Org toggles set deliberately: resolution notes, direct-paging management, schedule-past edits</span></li><li class="check-item"><span class="checkbox "></span><span>ChatOps connected; Slack app behavior (auto-archive, naming, reminders) configured</span></li><li class="check-item"><span class="checkbox "></span><span>Incident workflow configured: severities mapped, statuses match process, mandatory fields minimal</span></li><li class="check-item"><span class="checkbox "></span><span>Codifiable resources managed in Terraform with PR review + per-env workspaces</span></li><li class="check-item"><span class="checkbox "></span><span>UI-only settings captured in a runbook for reproducibility</span></li></ul>
+<h2 id="references">References<span class="anchor">#references</span></h2>
+<ul class="doc-list"><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/set-up/" target="_blank" rel="noopener">Set up IRM</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/set-up/manage-access/" target="_blank" rel="noopener">Manage access</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/set-up/manage-access/roles-and-permissions/" target="_blank" rel="noopener">Roles and permissions</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/set-up/manage-access/teams/" target="_blank" rel="noopener">Teams / Team Access Management</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/set-up/admin-settings/" target="_blank" rel="noopener">Admin &amp; API settings</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/set-up/infra-as-code/" target="_blank" rel="noopener">Infrastructure as code</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/manage-incidents/customize-incident-response/incident-response-settings/" target="_blank" rel="noopener">Incident response settings</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/integrations/chat-and-collaboration/" target="_blank" rel="noopener">Chat &amp; collaboration integrations</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/integrations/chat-and-collaboration/slack/" target="_blank" rel="noopener">Slack for IRM</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/reference/oncall-api/" target="_blank" rel="noopener">OnCall API reference</a></li><li><a href="https://registry.terraform.io/providers/grafana/grafana/latest/docs" target="_blank" rel="noopener">Grafana Terraform provider</a></li></ul>
+<h2 id="related-guides">Related guides<span class="anchor">#related-guides</span></h2>
+<ul class="doc-list"><li><a href="integrations.html">Integrations</a> — Connect alert sources and shape alerts with templates, grouping, and routing.</li><li><a href="on-call-schedules.html">On-Call Schedules</a> — Design reliable rotations at scale — from the web UI to Terraform.</li><li><a href="alert-fatigue.html">Reducing Alert Fatigue</a> — Cut alert noise and protect responders — grouping, escalation tuning, auto-resolve, measurement.</li></ul>
+<p>_Part of the Grafana IRM enablement series — each topic also has an enablement deck and an implementation checklist in its folder._</p>
+      <div class="pager">
+        <a class="pager-card prev raised" href="insights.html"><div class="pager-label">← Previous</div><div class="pager-title">Insights</div></a>
+        <a class="pager-card next raised" href="alert-fatigue.html"><div class="pager-label">Next →</div><div class="pager-title">Reducing Alert Fatigue</div></a>
+      </div>
+    </main>
+
+    <aside class="rail">
+      <div class="toc raised">
+        <div class="toc-title">On this page</div>
+        <a class="toc-link" href="#1-what-the-settings-section-is" data-target="1-what-the-settings-section-is">1. What the Settings section is</a>
+<a class="toc-link" href="#2-access-management-roles" data-target="2-access-management-roles">2. Access management: roles</a>
+<a class="toc-link" href="#3-teams-scoping-resources" data-target="3-teams-scoping-resources">3. Teams: scoping resources</a>
+<a class="toc-link" href="#4-api-and-tokens" data-target="4-api-and-tokens">4. API and tokens</a>
+<a class="toc-link" href="#5-org-level-behavior-toggles-admin-api" data-target="5-org-level-behavior-toggles-admin-api">5. Org-level behavior toggles (Admin &amp; API)</a>
+<a class="toc-link" href="#6-chatops-configuration" data-target="6-chatops-configuration">6. ChatOps configuration</a>
+<a class="toc-link" href="#7-incident-response-settings-incidents-tab" data-target="7-incident-response-settings-incidents-tab">7. Incident-response settings (Incidents tab)</a>
+<a class="toc-link" href="#8-who-can-change-settings" data-target="8-who-can-change-settings">8. Who can change settings</a>
+<a class="toc-link" href="#9-settings-as-code" data-target="9-settings-as-code">9. Settings as code</a>
+<a class="toc-link sub" href="#as-code-best-practices" data-target="as-code-best-practices">As-code best practices</a>
+<a class="toc-link" href="#10-quick-reference-checklist" data-target="10-quick-reference-checklist">10. Quick reference checklist</a>
+<a class="toc-link" href="#references" data-target="references">References</a>
+<a class="toc-link" href="#related-guides" data-target="related-guides">Related guides</a>
+      </div>
+    </aside>
+  </div>
+  <script>
+function copyCode(btn){
+  var pre = btn.closest('.code-block').querySelector('.code-body');
+  navigator.clipboard.writeText(pre.innerText).then(function(){
+    var old = btn.innerHTML; btn.innerHTML = 'Copied'; setTimeout(function(){ btn.innerHTML = old; }, 1200);
+  });
+}
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc-link'));
+  var map = {};
+  links.forEach(function(l){ var id=l.getAttribute('data-target'); if(id) map[id]=l; });
+  var heads = Array.prototype.slice.call(document.querySelectorAll('.content h2, .content h3'));
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){
+        links.forEach(function(l){ l.classList.remove('active'); });
+        var l = map[e.target.id]; if(l) l.classList.add('active');
+      }
+    });
+  }, {rootMargin:'-90px 0px -70% 0px', threshold:0});
+  heads.forEach(function(h){ obs.observe(h); });
+})();
+</script>
+</body>
+</html>

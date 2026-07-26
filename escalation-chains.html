@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Escalation Chains — Grafana IRM Best Practices</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#2b2d31; --bg-light:#313339; --bg-lighter:#383a41;
+  --shadow-dark:#1c1d20; --shadow-light:#3a3d44;
+  --accent-1:#f46800; --accent-2:#ff9830;
+  --ok:#33c17f; --warn:#ffb020;
+  --text-primary:#eceded; --text-secondary:#b9bdc5; --text-dim:#9298a2;
+  --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+  --radius-lg:24px; --radius-md:16px; --radius-sm:10px;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.4),0 4px 10px rgba(0,0,0,.28);
+  --shadow-md:0 2px 4px rgba(0,0,0,.42),0 12px 28px rgba(0,0,0,.32);
+  --shadow-lg:0 4px 8px rgba(0,0,0,.42),0 22px 48px rgba(0,0,0,.36);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text-primary);
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  font-size:15px;line-height:1.65;}
+.raised{background:var(--bg-light);box-shadow:var(--shadow-md);}
+.inset{background:var(--bg-light);box-shadow:inset 3px 3px 6px rgba(0,0,0,.45);}
+.flat-raised{background:var(--bg-light);box-shadow:var(--shadow-sm);}
+a{color:inherit;text-decoration:none;}
+code,pre{font-family:var(--mono);}
+.content a{color:#ffb37a;text-decoration:none;border-bottom:1px solid rgba(255,179,122,.25);}
+.content a:hover{border-bottom-color:#ffb37a;}
+
+.topbar{display:flex;align-items:center;gap:20px;padding:16px 28px;
+  background:var(--bg-light);box-shadow:0 4px 4px rgba(0,0,0,.3),0 12px 24px rgba(0,0,0,.3);
+  position:sticky;top:0;z-index:10;}
+.logo{height:40px;display:flex;align-items:center;justify-content:center;
+  text-decoration:none;transition:transform .15s;}
+.logo:hover{transform:scale(1.06);}
+.logo .glogo,.glogo{height:34px;width:auto;display:block;}
+.product-name{font-weight:700;font-size:15px;}
+.product-sub{font-size:11px;color:var(--text-dim);}
+.topbar-spacer{flex:1;}
+.top-actions{display:flex;align-items:center;gap:12px;margin-left:auto;}
+.version-pill{font-size:11px;padding:6px 12px;border-radius:20px;color:#ff8a5c;
+  display:flex;align-items:center;gap:6px;box-shadow:var(--shadow-sm);}
+
+.layout{display:grid;grid-template-columns:266px 1fr 220px;gap:32px;
+  max-width:1320px;margin:0 auto;padding:32px 28px 96px;align-items:start;}
+.sidebar{position:sticky;top:92px;padding:18px;border-radius:var(--radius-md);
+  max-height:calc(100vh - 120px);overflow-y:auto;}
+.nav-group+.nav-group{margin-top:22px;}
+.nav-group-title{font-size:10px;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--text-dim);margin-bottom:10px;padding:0 10px;font-weight:700;}
+.nav-link{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;
+  font-size:13.5px;color:var(--text-secondary);margin-bottom:2px;transition:background .15s;}
+.nav-link:hover{background:var(--bg-lighter);}
+.nav-link .dot-marker{width:5px;height:5px;border-radius:50%;background:var(--text-dim);flex-shrink:0;}
+.nav-link.active{color:#fff;background:var(--bg-lighter);box-shadow:inset 2px 2px 5px rgba(0,0,0,.4);}
+.nav-link.active .dot-marker{background:var(--accent-1);}
+
+.content{min-width:0;}
+.breadcrumb{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);margin-bottom:18px;}
+.breadcrumb .sep{opacity:.5;}
+.breadcrumb .current{color:var(--text-secondary);}
+.content h1{font-size:32px;font-weight:800;letter-spacing:-.02em;margin-bottom:10px;}
+.lede{color:var(--text-secondary);font-size:15.5px;max-width:720px;margin-bottom:28px;}
+.content h2{font-size:20px;font-weight:700;margin:38px 0 14px;scroll-margin-top:100px;
+  display:flex;align-items:center;gap:10px;}
+.content h2 .anchor{color:var(--text-dim);font-size:13px;font-weight:400;opacity:0;transition:opacity .15s;}
+.content h2:hover .anchor{opacity:1;}
+.content h3{font-size:15.5px;font-weight:700;margin:24px 0 10px;color:var(--text-primary);scroll-margin-top:100px;}
+.content p{color:var(--text-secondary);margin-bottom:14px;max-width:720px;}
+.content p code,.content li code,.content td code{font-family:var(--mono);font-size:13px;
+  background:var(--bg-lighter);padding:2px 6px;border-radius:5px;color:#ffb37a;
+  box-shadow:inset 1px 1px 3px var(--shadow-dark);}
+.divider{border:none;border-top:1px solid rgba(255,255,255,.06);margin:30px 0;max-width:720px;}
+.diagram{margin:0 0 24px;padding:14px;border-radius:var(--radius-md);background:#111217;overflow:auto;box-shadow:var(--shadow-lg);}
+.diagram svg{width:100%;height:auto;display:block;}
+.diagram img{width:100%;height:auto;display:block;}
+.diagram figcaption{font-size:12px;color:var(--text-dim);margin-top:10px;text-align:center;}
+
+.doc-list{margin:0 0 16px 4px;max-width:720px;}
+.doc-list li{color:var(--text-secondary);margin:0 0 7px 20px;padding-left:4px;}
+.doc-list li::marker{color:var(--accent-1);}
+
+.checklist{list-style:none;max-width:720px;margin-bottom:16px;
+  display:grid;gap:8px;}
+.check-item{display:flex;align-items:flex-start;gap:12px;
+  padding:11px 14px;border-radius:12px;background:var(--bg-light);box-shadow:var(--shadow-sm);
+  color:var(--text-secondary);font-size:13.5px;}
+.checkbox{width:18px;height:18px;border-radius:6px;flex-shrink:0;margin-top:1px;
+  background:var(--bg-lighter);box-shadow:inset 1px 1px 3px var(--shadow-dark);}
+.checkbox.checked{background:linear-gradient(135deg,var(--accent-1),var(--accent-2));box-shadow:var(--shadow-sm);}
+
+.code-block{border-radius:var(--radius-md);overflow:hidden;margin-bottom:20px;box-shadow:var(--shadow-lg);}
+.code-head{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;
+  background:var(--bg-lighter);box-shadow:inset 0 -2px 4px rgba(0,0,0,.2);}
+.code-head .fname{font-size:11.5px;color:var(--text-dim);font-family:var(--mono);}
+.copy-btn{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-secondary);
+  padding:5px 10px;border-radius:8px;border:none;background:var(--bg-light);cursor:pointer;box-shadow:var(--shadow-sm);}
+.copy-btn svg{width:12px;height:12px;}
+.code-body{padding:18px 20px;font-size:12.5px;color:#d6d8dc;overflow-x:auto;line-height:1.55;white-space:pre;}
+.code-body .c-key{color:#ff8a5c;}
+.code-body .c-str{color:#8fd08f;}
+.code-body .c-com{color:#9aa0aa;font-style:italic;}
+.code-body .c-fn{color:#7fb6ff;}
+
+.callout{display:flex;gap:14px;padding:16px 18px;border-radius:var(--radius-md);margin-bottom:20px;max-width:720px;}
+.callout .icon{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.callout .icon svg{width:15px;height:15px;}
+.callout .body .title{font-weight:700;font-size:13px;margin-bottom:3px;}
+.callout .body p{margin:0;font-size:13px;color:var(--text-secondary);}
+.callout.info{border-left:3px solid #7fb6ff;box-shadow:var(--shadow-md),0 10px 26px rgba(127,182,255,.10);}
+.callout.info .icon{background:rgba(127,182,255,.15);color:#7fb6ff;}
+.callout.info .title{color:#7fb6ff;}
+.callout.warn{border-left:3px solid var(--warn);box-shadow:var(--shadow-md),0 10px 26px rgba(255,176,32,.10);}
+.callout.warn .icon{background:rgba(255,176,32,.15);color:var(--warn);}
+.callout.warn .title{color:var(--warn);}
+.callout.danger{border-left:3px solid var(--accent-1);box-shadow:var(--shadow-md),0 10px 26px rgba(244,104,0,.12);}
+.callout.danger .icon{background:linear-gradient(135deg,var(--accent-1),var(--accent-2));color:#fff;}
+.callout.danger .title{color:#ff8a5c;}
+
+.table-wrap{border-radius:var(--radius-md);overflow:hidden;margin-bottom:24px;box-shadow:var(--shadow-lg);max-width:100%;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead{background:var(--bg-lighter);}
+th{text-align:left;padding:12px 16px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);font-weight:700;}
+td{padding:12px 16px;color:var(--text-secondary);border-top:1px solid rgba(255,255,255,.04);vertical-align:top;}
+
+.pager{display:flex;justify-content:space-between;gap:16px;margin-top:48px;}
+.pager-card{flex:1;padding:16px 18px;border-radius:var(--radius-md);display:flex;flex-direction:column;gap:4px;}
+.pager-card.next{text-align:right;align-items:flex-end;}
+.pager-label{font-size:10.5px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em;}
+.pager-title{font-size:14px;font-weight:600;color:var(--text-primary);}
+.pager-card.empty{visibility:hidden;}
+
+.toc{position:sticky;top:92px;padding:18px 16px;border-radius:var(--radius-md);
+  max-height:calc(100vh - 120px);overflow-y:auto;}
+.toc-title{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:12px;font-weight:700;}
+.toc-link{display:block;font-size:12.5px;color:var(--text-dim);padding:6px 10px;
+  border-left:2px solid transparent;margin-bottom:2px;line-height:1.4;}
+.toc-link:hover{color:var(--text-secondary);}
+.toc-link.active{color:var(--text-primary);border-left:2px solid var(--accent-1);
+  background:var(--bg-lighter);border-radius:0 8px 8px 0;}
+.toc-link.sub{padding-left:20px;font-size:12px;}
+
+@media (max-width:980px){
+  .layout{grid-template-columns:1fr;}
+  .sidebar,.toc{position:static;max-height:none;}
+  aside.rail{display:none;}
+}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="logo" href="index.html" aria-label="Grafana Labs — back to all guides"><svg class="glogo" viewBox="0 0 222 60" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Grafana Labs"><title>Grafana Labs</title><defs><linearGradient id="gflogo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF23F"/><stop offset="0.38" stop-color="#FBB040"/><stop offset="1" stop-color="#F05A28"/></linearGradient></defs><g fill="url(#gflogo)" transform="translate(0,-3)"><path d="M31 4 C 28 10 29.5 15 27 18.5 C 25.2 15.5 25 12.8 25.6 10.4 C 20.5 14 18 21.5 21 28 C 23.2 32.6 27.4 35 31 35 C 35.6 35 40 32.2 41.6 27.4 C 43.2 22.4 41 16.5 36.6 13.4 C 37.4 16.6 36.8 19 34.8 20.8 C 36.4 15.6 34.6 8.6 31 4 Z"/><path d="M18.5 38 h23 a2.5 2.5 0 0 1 2.5 2.5 a4 4 0 0 1 -4 4 h-22.5 a4 4 0 0 1 -4 -4 a2.5 2.5 0 0 1 2.5 -2.5 Z"/><path d="M24.5 47 h11 v5.5 a5.5 5.5 0 0 1 -11 0 Z"/></g><text x="56" y="39" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="29" font-weight="700" letter-spacing="-0.5" fill="#FFFFFF">Grafana Labs</text></svg></a>
+    <div>
+      <div class="product-name">IRM</div>
+      <div class="product-sub">Best Practices</div>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="top-actions">
+      <div class="version-pill flat-raised">Grafana Cloud IRM</div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <aside class="sidebar raised">
+      <div class="nav-group"><div class="nav-group-title">On-Call</div>
+<a class="nav-link" href="on-call-schedules.html"><span class="dot-marker"></span>On-Call Schedules</a>
+<a class="nav-link active" href="escalation-chains.html"><span class="dot-marker"></span>Escalation Chains</a>
+</div>
+<div class="nav-group"><div class="nav-group-title">Alert Sources</div>
+<a class="nav-link" href="integrations.html"><span class="dot-marker"></span>Integrations</a>
+</div>
+<div class="nav-group"><div class="nav-group-title">Incidents</div>
+<a class="nav-link" href="incident-management.html"><span class="dot-marker"></span>Incident Management</a>
+<a class="nav-link" href="tasks.html"><span class="dot-marker"></span>Tasks</a>
+</div>
+<div class="nav-group"><div class="nav-group-title">Measure &amp; Improve</div>
+<a class="nav-link" href="insights.html"><span class="dot-marker"></span>Insights</a>
+</div>
+<div class="nav-group"><div class="nav-group-title">Administer</div>
+<a class="nav-link" href="settings.html"><span class="dot-marker"></span>Settings</a>
+<a class="nav-link" href="alert-fatigue.html"><span class="dot-marker"></span>Reducing Alert Fatigue</a>
+</div>
+<div class="nav-group"><div class="nav-group-title">Responder Setup</div>
+<a class="nav-link" href="notification-setup.html"><span class="dot-marker"></span>Responder Notification Setup</a>
+<a class="nav-link" href="responder-playbook.html"><span class="dot-marker"></span>Responder Playbook</a>
+</div>
+    </aside>
+
+    <main class="content">
+      <div class="breadcrumb">
+        <span><a href="index.html">Guides</a></span><span class="sep">/</span>
+        <span>On-Call</span><span class="sep">/</span>
+        <span class="current">Escalation Chains</span>
+      </div>
+      <h1>Escalation Chains</h1>
+      <p class="lede">A practical guide to designing, operating, and scaling escalation chains in Grafana Cloud IRM. Written for platform teams configuring escalation and for engineers who respond to alerts. Companion to the <a href="on-call-schedules.html">On-Call Schedules Best Practices Guide</a>.</p>
+      <hr class="divider">
+<h2 id="1-what-escalation-chains-do">1. What escalation chains do<span class="anchor">#1-what-escalation-chains-do</span></h2>
+<p>An escalation chain is a sequence of steps that IRM executes when an alert group is created. Each step can notify users, wait for a response, or perform actions like declaring an incident. Chains automate your incident response workflow by executing ordered steps until an alert is acknowledged, resolved, or all steps complete.</p>
+<p>Escalation chains sit at the center of the alert flow:</p>
+<div class="code-block raised"><div class="code-head"><span class="fname">text</span><button class="copy-btn flat-raised" onclick="copyCode(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>Copy</button></div><pre class="code-body">Alert → Route → Escalation Chain → Schedule → Responder</pre></div>
+<p>Alerts arrive via integrations (Grafana Alerting, Prometheus, webhooks, and so on). Routes — configured per integration — determine which escalation chain handles an alert group. The chain then executes its steps in order, referencing schedules (who is on-call now) and each responder's personal notification rules (how that person is contacted).</p>
+<div class="callout warn raised"><div class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg></div><div class="body"><div class="title">Key concept — snapshots</div><p>IRM snapshots the escalation chain when it creates an alert group. Chain configuration, steps, and user queue positions are frozen at that moment; changes to a chain don't affect alert groups already using it. Schedules are the opposite: the chain stores only a *reference* to the schedule, and IRM checks who is currently on-call when the step actually executes. Two practical consequences: always test chain changes with *new* alerts, and rest easy that shift swaps take effect immediately even mid-escalation.</p></div></div>
+<h2 id="2-escalation-step-types">2. Escalation step types<span class="anchor">#2-escalation-step-types</span></h2>
+<h3 id="notification-steps">Notification steps</h3>
+<div class="table-wrap raised"><table><thead><tr><th>Step</th><th>What it does</th></tr></thead><tbody><tr><td>Notify users</td><td>Send notifications to specific users</td></tr><tr><td>Notify from on-call schedule</td><td>Alert the currently on-call user(s) of a schedule</td></tr><tr><td>Notify next on-call shift from schedule</td><td>Notify all users of the *next* shift (14-day lookahead; skipped if none)</td></tr><tr><td>Notify all team members</td><td>Alert everyone in a specified team</td></tr><tr><td>Notify Slack channel / user group</td><td>Notify via Slack (whole-channel pings all members — use with care)</td></tr><tr><td>Notify users one by one (round robin)</td><td>Cycle through users across *different* alert groups, sorted by username</td></tr></tbody></table></div>
+<p>Round robin distributes load *across* alert groups (group 1 → user A, group 2 → user B). To notify multiple users within the same alert group until someone acknowledges, use multiple Notify steps separated by Wait steps.</p>
+<div class="callout info raised"><div class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg></div><div class="body"><div class="title">Default vs Important</div><p>every notification step targets one of the two personal notification rule sets in each user's IRM profile. Default is for standard notifications; Important is for high-priority notifications that use more aggressive channels or frequencies. Responders must configure both rule sets for Important steps to behave differently.</p></div></div>
+<h3 id="timing-and-control-steps">Timing and control steps</h3>
+<div class="table-wrap raised"><table><thead><tr><th>Step</th><th>What it does</th></tr></thead><tbody><tr><td>Wait</td><td>Pause for a set duration (60 seconds – 24 hours)</td></tr><tr><td>Repeat escalation</td><td>Loop the previous steps up to 5 times per repeat step</td></tr><tr><td>Continue if current UTC time is in range</td><td>Time-based gating (e.g. 09:00:00Z–18:00:00Z)</td></tr><tr><td>Notify if number of alerts in time window</td><td>Volume threshold gating (more than X alerts in Y minutes)</td></tr></tbody></table></div>
+<p>To repeat more than five times, add multiple repeat steps — each has its own counter; when exhausted, escalation advances to the next step.</p>
+<h3 id="action-steps">Action steps</h3>
+<div class="table-wrap raised"><table><thead><tr><th>Step</th><th>What it does</th></tr></thead><tbody><tr><td>Resolve incident automatically</td><td>Marks the alert group "Resolved automatically"</td></tr><tr><td>Trigger outgoing webhook</td><td>Send data to an external system (ticketing, remediation)</td></tr><tr><td>Declare incident</td><td>Creates a Grafana Incident with a specified severity</td></tr></tbody></table></div>
+<p>Declare incident works only on non-default routes, and is limited to one active incident per route — additional alerts are grouped into the active incident.</p>
+<h2 id="3-the-basic-chain-pattern">3. The basic chain pattern<span class="anchor">#3-the-basic-chain-pattern</span></h2>
+<p>Most chains should follow this shape:</p>
+<div class="code-block raised"><div class="code-head"><span class="fname">text</span><button class="copy-btn flat-raised" onclick="copyCode(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>Copy</button></div><pre class="code-body">1. Notify on-call from schedule
+2. Wait 5 minutes
+3. Notify on-call from schedule (important)
+4. Wait 10 minutes
+5. Notify backup schedule</pre></div>
+<p>Start standard, wait for acknowledgment, escalate to important, and eventually reach a backup. Start simple — notify, wait, escalate — and add sophistication only when metrics show you need it.</p>
+<h3 id="choose-wait-durations-by-priority">Choose wait durations by priority</h3>
+<div class="table-wrap raised"><table><thead><tr><th>Wait</th><th>Use case</th></tr></thead><tbody><tr><td>1 minute</td><td>Urgent alerts, quick acknowledgment expected</td></tr><tr><td>5 minutes</td><td>Standard alerts, reasonable response time</td></tr><tr><td>15 minutes</td><td>Lower priority, allows investigation time</td></tr><tr><td>30–60 minutes</td><td>Informational alerts, batch processing</td></tr></tbody></table></div>
+<p>Start with longer waits and shorten based on actual response times. Wait steps space out notifications and prevent notification fatigue.</p>
+<h3 id="end-every-chain-definitively">End every chain definitively</h3>
+<p>Without a terminal step, escalation can simply stop with nobody responding. Close every chain with one of: <strong>Resolve</strong> (auto-resolve if no response is needed), <strong>Notify all</strong> (escalate to an entire team or channel as a last resort), or <strong>Repeat</strong> (restart the chain a limited number of times — the 5-repeat cap prevents infinite loops).</p>
+<h3 id="use-important-sparingly">Use Important sparingly</h3>
+<p>Reserve Important notifications for genuine escalation within a chain — after initial notification attempts fail, or for truly critical alerts. Overusing them reduces their effectiveness. The standard pattern: notify (default) → wait 5 minutes → notify (important).</p>
+<h2 id="4-proven-example-chains">4. Proven example chains<span class="anchor">#4-proven-example-chains</span></h2>
+<div class="callout info raised"><div class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg></div><div class="body"><div class="title">Critical system</div><p>— fast, loud, ends in an incident:</p></div></div>
+<div class="code-block raised"><div class="code-head"><span class="fname">text</span><button class="copy-btn flat-raised" onclick="copyCode(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>Copy</button></div><pre class="code-body">1. Notify primary on-call (important)
+2. Notify Slack channel #critical-alerts
+3. Wait 5 minutes
+4. Notify backup on-call (important)
+5. Wait 2 minutes
+6. Notify all team members (important)
+7. Wait 2 minutes
+8. Declare incident (severity: critical)</pre></div>
+<p><strong>Shadow/onboarding coverage:</strong></p>
+<div class="code-block raised"><div class="code-head"><span class="fname">text</span><button class="copy-btn flat-raised" onclick="copyCode(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>Copy</button></div><pre class="code-body">1. Notify from Primary Schedule
+2. Wait 5 minutes
+3. Notify from Shadow Schedule
+4. Wait 5 minutes
+5. Notify next on-call shift from Primary Schedule</pre></div>
+<div class="callout info raised"><div class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg></div><div class="body"><div class="title">Business hours vs after hours</div><p>— two schedules, one chain. This works because when an escalation step attempts to notify from a schedule that has no one on-call, that step is automatically skipped:</p></div></div>
+<div class="code-block raised"><div class="code-head"><span class="fname">text</span><button class="copy-btn flat-raised" onclick="copyCode(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>Copy</button></div><pre class="code-body">1. Notify from "Business Hours Team" (important)
+2. Wait 5 minutes
+3. Notify from "After Hours Individual" (important)</pre></div>
+<p>Alternative: a single 24/7 schedule with different shifts, which is simpler to manage and scales better.</p>
+<div class="callout warn raised"><div class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg></div><div class="body"><div class="title">Volume throttling</div><p>— avoid paging for noise while still escalating real problems: gate the chain with "Notify if number of alerts in time window" (e.g. more than 5 alerts in 30 minutes → continue; otherwise stop).</p></div></div>
+<h2 id="5-routes-getting-alerts-to-the-right-chain">5. Routes: getting alerts to the right chain<span class="anchor">#5-routes-getting-alerts-to-the-right-chain</span></h2>
+<p>Routes are configured per integration and evaluated top to bottom — first match wins.</p>
+<ul class="doc-list"><li>Write routing conditions as Jinja2 templates that evaluate to <code>True</code>, e.g. <code>{{ payload.severity == "critical" }}</code> or label-based: <code>{{ labels.team == "database" }}</code>.</li><li>Route by team, severity, or environment — and reuse generic severity-based chains across multiple teams' routes.</li><li>Always keep a catch-all default route (<code>{{ True }}</code>) at the bottom so no alert falls through.</li><li>Use the template preview with sample payloads to test conditions; <code>{{ payload }}</code> helps debug what's actually arriving.</li><li>Routes also control ChatOps delivery: the route defines which Slack channel receives the alert group; the <code>notify_whole_channel</code> escalation step controls when that channel is pinged. You can't post to one channel and notify a different one.</li></ul>
+<h2 id="6-organizing-chains-at-scale">6. Organizing chains at scale<span class="anchor">#6-organizing-chains-at-scale</span></h2>
+<ul class="doc-list"><li><strong>One chain per escalation path.</strong> Separate fast and slow paths: <code>payments-critical</code> (rapid escalation) vs <code>payments-warning</code> (slower), <code>platform-business-hours</code> vs <code>platform-24x7</code>.</li><li><strong>Name clearly.</strong> Include team/service, severity, and time behavior: <code>auth-team-critical-24x7</code>, <code>data-pipeline-business-hours</code>, <code>infrastructure-p1-immediate</code>.</li><li><strong>Reuse chains across routes.</strong> A chain can serve multiple routes — build generic severity-based chains that many teams use, plus team-specific chains shared across that team's services.</li><li><strong>Document your chains.</strong> Maintain a short explanation of each chain's purpose and expected behavior.</li><li><strong>Check before deleting.</strong> Review the "Linked integrations and routes" panel first — changes affect every associated integration and route.</li></ul>
+<h2 id="7-testing-and-tuning">7. Testing and tuning<span class="anchor">#7-testing-and-tuning</span></h2>
+<p>Before deploying a chain: create a test integration, send test alerts through it, and verify notifications reach the right people at the right times. Because of snapshotting, always test with new alerts — editing a chain does nothing for alert groups already in flight.</p>
+<p>Monitor three metrics and tune accordingly:</p>
+<ul class="doc-list"><li><strong>Time to first acknowledgment</strong> — slow? Add Important-notification steps earlier.</li><li><strong>Escalation depth</strong> (how many steps run before response) — consistently deep? Shorten waits or add notification channels.</li><li><strong>False escalations</strong> — frequent? Improve alert quality or add volume throttling.</li></ul>
+<h2 id="8-onboarding-responders">8. Onboarding responders<span class="anchor">#8-onboarding-responders</span></h2>
+<ul class="doc-list"><li>Chains decide *who and when*; each user's personal notification rules decide *how*. Every responder must configure <strong>both</strong> the Default and Important rule sets — otherwise Important steps escalate nothing.</li><li>Acknowledging an alert group stops escalation; make sure responders know to acknowledge promptly, even before investigating.</li><li>When unsure whether a step should be Default or Important, start with Default and escalate to Important later in the chain.</li></ul>
+<h2 id="9-escalation-chains-as-code-terraform-and-api">9. Escalation chains as code (Terraform and API)<span class="anchor">#9-escalation-chains-as-code-terraform-and-api</span></h2>
+<p>Managing chains as code brings the same benefits as schedules: version control, review workflows, reuse of proven escalation patterns, and consistency across dozens of teams.</p>
+<h3 id="terraform">Terraform</h3>
+<p>Two resources model chains: <code>grafana_oncall_escalation_chain</code> (the container) and <code>grafana_oncall_escalation</code> (one resource per step, ordered by <code>position</code> starting from 0).</p>
+<div class="code-block raised"><div class="code-head"><span class="fname">terraform</span><button class="copy-btn flat-raised" onclick="copyCode(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>Copy</button></div><pre class="code-body"><span class="c-key">data</span> <span class="c-str">"grafana_team"</span> <span class="c-str">"my_team"</span> { name = <span class="c-str">"my team"</span> }
+<span class="c-key">data</span> <span class="c-str">"grafana_oncall_team"</span> <span class="c-str">"my_team"</span> { name = data.grafana_team.my_team.name }
+
+<span class="c-key">resource</span> <span class="c-str">"grafana_oncall_escalation_chain"</span> <span class="c-str">"default"</span> {
+  <span class="c-key">provider</span> = grafana.oncall
+  name     = <span class="c-str">"default"</span>
+  team_id  = data.grafana_oncall_team.my_team.id
+}</pre></div>
+<p>A complete basic pattern as code:</p>
+<div class="code-block raised"><div class="code-head"><span class="fname">terraform</span><button class="copy-btn flat-raised" onclick="copyCode(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>Copy</button></div><pre class="code-body"><span class="c-com"># Step 0: notify current on-call</span>
+<span class="c-key">resource</span> <span class="c-str">"grafana_oncall_escalation"</span> <span class="c-str">"notify_oncall"</span> {
+  escalation_chain_id          = grafana_oncall_escalation_chain.default.id
+  <span class="c-key">type</span>                         = <span class="c-str">"notify_on_call_from_schedule"</span>
+  notify_on_call_from_schedule = grafana_oncall_schedule.primary.id
+  position                     = 0
+}
+
+<span class="c-com"># Step 1: wait 5 minutes</span>
+<span class="c-key">resource</span> <span class="c-str">"grafana_oncall_escalation"</span> <span class="c-str">"wait_5m"</span> {
+  escalation_chain_id = grafana_oncall_escalation_chain.default.id
+  <span class="c-key">type</span>                = <span class="c-str">"wait"</span>
+  duration            = 300
+  position            = 1
+}
+
+<span class="c-com"># Step 2: notify again using important notification rules</span>
+<span class="c-key">resource</span> <span class="c-str">"grafana_oncall_escalation"</span> <span class="c-str">"notify_important"</span> {
+  escalation_chain_id          = grafana_oncall_escalation_chain.default.id
+  <span class="c-key">type</span>                         = <span class="c-str">"notify_on_call_from_schedule"</span>
+  notify_on_call_from_schedule = grafana_oncall_schedule.primary.id
+  important                    = <span class="c-key">true</span>
+  position                     = 2
+}
+
+<span class="c-com"># Step 3: notify the next upcoming shift as backup</span>
+<span class="c-key">resource</span> <span class="c-str">"grafana_oncall_escalation"</span> <span class="c-str">"notify_next_shift"</span> {
+  escalation_chain_id          = grafana_oncall_escalation_chain.default.id
+  <span class="c-key">type</span>                         = <span class="c-str">"notify_next_on_call_from_schedule"</span>
+  notify_on_call_from_schedule = grafana_oncall_schedule.primary.id
+  position                     = 3
+}</pre></div>
+<p>Step <code>type</code> values: <code>wait</code>, <code>notify_persons</code>, <code>notify_person_next_each_time</code> (round robin), <code>notify_on_call_from_schedule</code>, <code>notify_next_on_call_from_schedule</code>, <code>trigger_webhook</code>, <code>notify_user_group</code>, <code>resolve</code>, <code>notify_whole_channel</code>, <code>notify_if_time_from_to</code>, <code>notify_if_num_alerts_in_window</code>, <code>repeat_escalation</code>, <code>notify_team_members</code>, <code>declare_incident</code>.</p>
+<p>Key arguments: <code>duration</code> (wait, 60–86400 seconds); <code>important</code> (bool, valid on person/schedule/group/team notify steps); <code>persons_to_notify</code> / <code>persons_to_notify_next_each_time</code> (user ID sets); <code>notify_on_call_from_schedule</code> (schedule ID, used by both schedule step types); <code>group_to_notify</code>; <code>action_to_trigger</code> (webhook ID); <code>notify_if_time_from</code> / <code>notify_if_time_to</code> (UTC, e.g. <code>08:00:00Z</code>/<code>18:00:00Z</code>); <code>num_alerts_in_window</code> / <code>num_minutes_in_window</code>; <code>severity</code> (for <code>declare_incident</code>). Import existing resources with <code>terraform import grafana_oncall_escalation_chain.name "{{ id }}"</code>.</p>
+<p>Slack note: to notify a whole channel, set <code>slack_channel_id</code> on the <code>grafana_oncall_route</code> and use a <code>notify_whole_channel</code> step — the route defines where the alert group is delivered; the escalation controls when the channel is pinged.</p>
+<h3 id="api">API</h3>
+<p>Authenticate with <code>Authorization: Bearer &lt;token&gt;</code> plus <code>X-Grafana-URL: https://your-stack.grafana.net</code>. Required permissions: <code>grafana-irm-app.escalation-chains:read</code> / <code>:write</code>.</p>
+<p>Chains: <code>GET/POST {{API_URL}}/api/v1/escalation_chains/</code>, <code>GET/DELETE .../&lt;ID&gt;/</code>. Steps ("escalation policies"): <code>GET/POST {{API_URL}}/api/v1/escalation_policies/</code> (same 14 types; <code>position: -1</code> appends to the end), <code>GET/PUT/DELETE .../&lt;ID&gt;/</code>.</p>
+<p>Useful operational endpoints on a chain: <code>GET /&lt;ID&gt;/current_oncall/</code> resolves everyone who would be notified before the first Wait step (with phone status: available / private / not_configured) — handy for pre-shift coverage checks; <code>/previous_oncall/</code> and <code>/next_oncall/</code> accept a <code>days</code> parameter (default 7, max 30); <code>POST /escalation_policies/&lt;ID&gt;/advance_round_robin/</code> advances a round-robin pointer.</p>
+<h3 id="as-code-best-practices">As-code best practices</h3>
+<ul class="doc-list"><li><strong>Model each step as its own resource</strong> with explicit <code>position</code> values — reordering is a one-line diff in review.</li><li><strong>Wrap standard patterns in modules</strong>: a "critical-24x7" module taking a schedule ID and Slack channel stamps out identical escalation behavior for every team.</li><li><strong>Keep chains, schedules, and routes in the same Terraform workspace</strong> so a single <code>terraform plan</code> shows the full blast radius of a change.</li><li><strong>Use source control + CI/CD</strong>: PR review for every escalation change, <code>terraform plan</code> in CI, apply on merge.</li><li><strong>RBAC on tokens</strong>: service-account tokens scoped with least privilege; restrict who can modify escalation config.</li><li><strong>Remember snapshots when rolling out</strong>: applied changes only affect *new* alert groups — schedule a test alert after each apply to validate the new chain.</li></ul>
+<h2 id="10-quick-reference-checklist">10. Quick reference checklist<span class="anchor">#10-quick-reference-checklist</span></h2>
+<ul class="checklist"><li class="check-item"><span class="checkbox "></span><span>Every integration has routes ending in a <code>{{ True }}</code> catch-all</span></li><li class="check-item"><span class="checkbox "></span><span>One chain per escalation path, named <code>team-severity-timebehavior</code></span></li><li class="check-item"><span class="checkbox "></span><span>Chains follow: notify → wait → notify (important) → backup</span></li><li class="check-item"><span class="checkbox "></span><span>Wait durations match alert priority (1 / 5 / 15 / 30–60 min)</span></li><li class="check-item"><span class="checkbox "></span><span>Every chain ends definitively (resolve, notify-all, or capped repeat)</span></li><li class="check-item"><span class="checkbox "></span><span>Important reserved for genuine escalation</span></li><li class="check-item"><span class="checkbox "></span><span>All responders have both Default and Important notification rules configured</span></li><li class="check-item"><span class="checkbox "></span><span>Chains tested with new alerts through a test integration</span></li><li class="check-item"><span class="checkbox "></span><span>Time to acknowledgment, escalation depth, and false escalations reviewed regularly</span></li><li class="check-item"><span class="checkbox "></span><span>Chains managed as code: one resource per step, modules for standard patterns</span></li></ul>
+<h2 id="references">References<span class="anchor">#references</span></h2>
+<ul class="doc-list"><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/guides/best-practices/escalation-chains/" target="_blank" rel="noopener">Best practices for escalation chains</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/escalation-and-routing/escalation-chains/" target="_blank" rel="noopener">Configure escalation chains</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/escalation-and-routing/routing-rules/" target="_blank" rel="noopener">Configure routing rules</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/guides/best-practices/routing/" target="_blank" rel="noopener">Routing best practices</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/notify-responders/personal-notification-rules/" target="_blank" rel="noopener">Personal notification rules</a></li><li><a href="https://grafana.com/docs/learning-paths/grafana-irm-configuration/create-escalation-chain/" target="_blank" rel="noopener">Learning path: create an escalation chain</a></li><li><a href="https://registry.terraform.io/providers/grafana/grafana/latest/docs/resources/oncall_escalation_chain" target="_blank" rel="noopener">Terraform: grafana_oncall_escalation_chain</a></li><li><a href="https://registry.terraform.io/providers/grafana/grafana/latest/docs/resources/oncall_escalation" target="_blank" rel="noopener">Terraform: grafana_oncall_escalation</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/reference/oncall-api/escalation_chains/" target="_blank" rel="noopener">Escalation chains API</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/reference/oncall-api/escalation_policies/" target="_blank" rel="noopener">Escalation policies API</a></li><li><a href="https://grafana.com/docs/grafana-cloud/developer-resources/infrastructure-as-code/terraform/terraform-oncall/" target="_blank" rel="noopener">Terraform IRM guide</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/guides/best-practices/schedules/" target="_blank" rel="noopener">Best practices for on-call schedules</a></li></ul>
+<h2 id="related-guides">Related guides<span class="anchor">#related-guides</span></h2>
+<ul class="doc-list"><li><a href="on-call-schedules.html">On-Call Schedules</a> — Design reliable rotations at scale — from the web UI to Terraform.</li><li><a href="notification-setup.html">Responder Notification Setup</a> — How responders actually get paged — the foundation everything else depends on.</li><li><a href="alert-fatigue.html">Reducing Alert Fatigue</a> — Cut alert noise and protect responders — grouping, escalation tuning, auto-resolve, measurement.</li></ul>
+<p>_Part of the Grafana IRM enablement series — each topic also has an enablement deck and an implementation checklist in its folder._</p>
+      <div class="pager">
+        <a class="pager-card prev raised" href="on-call-schedules.html"><div class="pager-label">← Previous</div><div class="pager-title">On-Call Schedules</div></a>
+        <a class="pager-card next raised" href="integrations.html"><div class="pager-label">Next →</div><div class="pager-title">Integrations</div></a>
+      </div>
+    </main>
+
+    <aside class="rail">
+      <div class="toc raised">
+        <div class="toc-title">On this page</div>
+        <a class="toc-link" href="#1-what-escalation-chains-do" data-target="1-what-escalation-chains-do">1. What escalation chains do</a>
+<a class="toc-link" href="#2-escalation-step-types" data-target="2-escalation-step-types">2. Escalation step types</a>
+<a class="toc-link sub" href="#notification-steps" data-target="notification-steps">Notification steps</a>
+<a class="toc-link sub" href="#timing-and-control-steps" data-target="timing-and-control-steps">Timing and control steps</a>
+<a class="toc-link sub" href="#action-steps" data-target="action-steps">Action steps</a>
+<a class="toc-link" href="#3-the-basic-chain-pattern" data-target="3-the-basic-chain-pattern">3. The basic chain pattern</a>
+<a class="toc-link sub" href="#choose-wait-durations-by-priority" data-target="choose-wait-durations-by-priority">Choose wait durations by priority</a>
+<a class="toc-link sub" href="#end-every-chain-definitively" data-target="end-every-chain-definitively">End every chain definitively</a>
+<a class="toc-link sub" href="#use-important-sparingly" data-target="use-important-sparingly">Use Important sparingly</a>
+<a class="toc-link" href="#4-proven-example-chains" data-target="4-proven-example-chains">4. Proven example chains</a>
+<a class="toc-link" href="#5-routes-getting-alerts-to-the-right-chain" data-target="5-routes-getting-alerts-to-the-right-chain">5. Routes: getting alerts to the right chain</a>
+<a class="toc-link" href="#6-organizing-chains-at-scale" data-target="6-organizing-chains-at-scale">6. Organizing chains at scale</a>
+<a class="toc-link" href="#7-testing-and-tuning" data-target="7-testing-and-tuning">7. Testing and tuning</a>
+<a class="toc-link" href="#8-onboarding-responders" data-target="8-onboarding-responders">8. Onboarding responders</a>
+<a class="toc-link" href="#9-escalation-chains-as-code-terraform-and-api" data-target="9-escalation-chains-as-code-terraform-and-api">9. Escalation chains as code (Terraform and API)</a>
+<a class="toc-link sub" href="#terraform" data-target="terraform">Terraform</a>
+<a class="toc-link sub" href="#api" data-target="api">API</a>
+<a class="toc-link sub" href="#as-code-best-practices" data-target="as-code-best-practices">As-code best practices</a>
+<a class="toc-link" href="#10-quick-reference-checklist" data-target="10-quick-reference-checklist">10. Quick reference checklist</a>
+<a class="toc-link" href="#references" data-target="references">References</a>
+<a class="toc-link" href="#related-guides" data-target="related-guides">Related guides</a>
+      </div>
+    </aside>
+  </div>
+  <script>
+function copyCode(btn){
+  var pre = btn.closest('.code-block').querySelector('.code-body');
+  navigator.clipboard.writeText(pre.innerText).then(function(){
+    var old = btn.innerHTML; btn.innerHTML = 'Copied'; setTimeout(function(){ btn.innerHTML = old; }, 1200);
+  });
+}
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc-link'));
+  var map = {};
+  links.forEach(function(l){ var id=l.getAttribute('data-target'); if(id) map[id]=l; });
+  var heads = Array.prototype.slice.call(document.querySelectorAll('.content h2, .content h3'));
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){
+        links.forEach(function(l){ l.classList.remove('active'); });
+        var l = map[e.target.id]; if(l) l.classList.add('active');
+      }
+    });
+  }, {rootMargin:'-90px 0px -70% 0px', threshold:0});
+  heads.forEach(function(h){ obs.observe(h); });
+})();
+</script>
+</body>
+</html>

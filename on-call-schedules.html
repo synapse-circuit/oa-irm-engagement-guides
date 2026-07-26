@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>On-Call Schedules — Grafana IRM Best Practices</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#2b2d31; --bg-light:#313339; --bg-lighter:#383a41;
+  --shadow-dark:#1c1d20; --shadow-light:#3a3d44;
+  --accent-1:#f46800; --accent-2:#ff9830;
+  --ok:#33c17f; --warn:#ffb020;
+  --text-primary:#eceded; --text-secondary:#b9bdc5; --text-dim:#9298a2;
+  --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+  --radius-lg:24px; --radius-md:16px; --radius-sm:10px;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.4),0 4px 10px rgba(0,0,0,.28);
+  --shadow-md:0 2px 4px rgba(0,0,0,.42),0 12px 28px rgba(0,0,0,.32);
+  --shadow-lg:0 4px 8px rgba(0,0,0,.42),0 22px 48px rgba(0,0,0,.36);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text-primary);
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  font-size:15px;line-height:1.65;}
+.raised{background:var(--bg-light);box-shadow:var(--shadow-md);}
+.inset{background:var(--bg-light);box-shadow:inset 3px 3px 6px rgba(0,0,0,.45);}
+.flat-raised{background:var(--bg-light);box-shadow:var(--shadow-sm);}
+a{color:inherit;text-decoration:none;}
+code,pre{font-family:var(--mono);}
+.content a{color:#ffb37a;text-decoration:none;border-bottom:1px solid rgba(255,179,122,.25);}
+.content a:hover{border-bottom-color:#ffb37a;}
+
+.topbar{display:flex;align-items:center;gap:20px;padding:16px 28px;
+  background:var(--bg-light);box-shadow:0 4px 4px rgba(0,0,0,.3),0 12px 24px rgba(0,0,0,.3);
+  position:sticky;top:0;z-index:10;}
+.logo{height:40px;display:flex;align-items:center;justify-content:center;
+  text-decoration:none;transition:transform .15s;}
+.logo:hover{transform:scale(1.06);}
+.logo .glogo,.glogo{height:34px;width:auto;display:block;}
+.product-name{font-weight:700;font-size:15px;}
+.product-sub{font-size:11px;color:var(--text-dim);}
+.topbar-spacer{flex:1;}
+.top-actions{display:flex;align-items:center;gap:12px;margin-left:auto;}
+.version-pill{font-size:11px;padding:6px 12px;border-radius:20px;color:#ff8a5c;
+  display:flex;align-items:center;gap:6px;box-shadow:var(--shadow-sm);}
+
+.layout{display:grid;grid-template-columns:266px 1fr 220px;gap:32px;
+  max-width:1320px;margin:0 auto;padding:32px 28px 96px;align-items:start;}
+.sidebar{position:sticky;top:92px;padding:18px;border-radius:var(--radius-md);
+  max-height:calc(100vh - 120px);overflow-y:auto;}
+.nav-group+.nav-group{margin-top:22px;}
+.nav-group-title{font-size:10px;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--text-dim);margin-bottom:10px;padding:0 10px;font-weight:700;}
+.nav-link{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;
+  font-size:13.5px;color:var(--text-secondary);margin-bottom:2px;transition:background .15s;}
+.nav-link:hover{background:var(--bg-lighter);}
+.nav-link .dot-marker{width:5px;height:5px;border-radius:50%;background:var(--text-dim);flex-shrink:0;}
+.nav-link.active{color:#fff;background:var(--bg-lighter);box-shadow:inset 2px 2px 5px rgba(0,0,0,.4);}
+.nav-link.active .dot-marker{background:var(--accent-1);}
+
+.content{min-width:0;}
+.breadcrumb{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);margin-bottom:18px;}
+.breadcrumb .sep{opacity:.5;}
+.breadcrumb .current{color:var(--text-secondary);}
+.content h1{font-size:32px;font-weight:800;letter-spacing:-.02em;margin-bottom:10px;}
+.lede{color:var(--text-secondary);font-size:15.5px;max-width:720px;margin-bottom:28px;}
+.content h2{font-size:20px;font-weight:700;margin:38px 0 14px;scroll-margin-top:100px;
+  display:flex;align-items:center;gap:10px;}
+.content h2 .anchor{color:var(--text-dim);font-size:13px;font-weight:400;opacity:0;transition:opacity .15s;}
+.content h2:hover .anchor{opacity:1;}
+.content h3{font-size:15.5px;font-weight:700;margin:24px 0 10px;color:var(--text-primary);scroll-margin-top:100px;}
+.content p{color:var(--text-secondary);margin-bottom:14px;max-width:720px;}
+.content p code,.content li code,.content td code{font-family:var(--mono);font-size:13px;
+  background:var(--bg-lighter);padding:2px 6px;border-radius:5px;color:#ffb37a;
+  box-shadow:inset 1px 1px 3px var(--shadow-dark);}
+.divider{border:none;border-top:1px solid rgba(255,255,255,.06);margin:30px 0;max-width:720px;}
+.diagram{margin:0 0 24px;padding:14px;border-radius:var(--radius-md);background:#111217;overflow:auto;box-shadow:var(--shadow-lg);}
+.diagram svg{width:100%;height:auto;display:block;}
+.diagram img{width:100%;height:auto;display:block;}
+.diagram figcaption{font-size:12px;color:var(--text-dim);margin-top:10px;text-align:center;}
+
+.doc-list{margin:0 0 16px 4px;max-width:720px;}
+.doc-list li{color:var(--text-secondary);margin:0 0 7px 20px;padding-left:4px;}
+.doc-list li::marker{color:var(--accent-1);}
+
+.checklist{list-style:none;max-width:720px;margin-bottom:16px;
+  display:grid;gap:8px;}
+.check-item{display:flex;align-items:flex-start;gap:12px;
+  padding:11px 14px;border-radius:12px;background:var(--bg-light);box-shadow:var(--shadow-sm);
+  color:var(--text-secondary);font-size:13.5px;}
+.checkbox{width:18px;height:18px;border-radius:6px;flex-shrink:0;margin-top:1px;
+  background:var(--bg-lighter);box-shadow:inset 1px 1px 3px var(--shadow-dark);}
+.checkbox.checked{background:linear-gradient(135deg,var(--accent-1),var(--accent-2));box-shadow:var(--shadow-sm);}
+
+.code-block{border-radius:var(--radius-md);overflow:hidden;margin-bottom:20px;box-shadow:var(--shadow-lg);}
+.code-head{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;
+  background:var(--bg-lighter);box-shadow:inset 0 -2px 4px rgba(0,0,0,.2);}
+.code-head .fname{font-size:11.5px;color:var(--text-dim);font-family:var(--mono);}
+.copy-btn{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-secondary);
+  padding:5px 10px;border-radius:8px;border:none;background:var(--bg-light);cursor:pointer;box-shadow:var(--shadow-sm);}
+.copy-btn svg{width:12px;height:12px;}
+.code-body{padding:18px 20px;font-size:12.5px;color:#d6d8dc;overflow-x:auto;line-height:1.55;white-space:pre;}
+.code-body .c-key{color:#ff8a5c;}
+.code-body .c-str{color:#8fd08f;}
+.code-body .c-com{color:#9aa0aa;font-style:italic;}
+.code-body .c-fn{color:#7fb6ff;}
+
+.callout{display:flex;gap:14px;padding:16px 18px;border-radius:var(--radius-md);margin-bottom:20px;max-width:720px;}
+.callout .icon{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.callout .icon svg{width:15px;height:15px;}
+.callout .body .title{font-weight:700;font-size:13px;margin-bottom:3px;}
+.callout .body p{margin:0;font-size:13px;color:var(--text-secondary);}
+.callout.info{border-left:3px solid #7fb6ff;box-shadow:var(--shadow-md),0 10px 26px rgba(127,182,255,.10);}
+.callout.info .icon{background:rgba(127,182,255,.15);color:#7fb6ff;}
+.callout.info .title{color:#7fb6ff;}
+.callout.warn{border-left:3px solid var(--warn);box-shadow:var(--shadow-md),0 10px 26px rgba(255,176,32,.10);}
+.callout.warn .icon{background:rgba(255,176,32,.15);color:var(--warn);}
+.callout.warn .title{color:var(--warn);}
+.callout.danger{border-left:3px solid var(--accent-1);box-shadow:var(--shadow-md),0 10px 26px rgba(244,104,0,.12);}
+.callout.danger .icon{background:linear-gradient(135deg,var(--accent-1),var(--accent-2));color:#fff;}
+.callout.danger .title{color:#ff8a5c;}
+
+.table-wrap{border-radius:var(--radius-md);overflow:hidden;margin-bottom:24px;box-shadow:var(--shadow-lg);max-width:100%;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead{background:var(--bg-lighter);}
+th{text-align:left;padding:12px 16px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);font-weight:700;}
+td{padding:12px 16px;color:var(--text-secondary);border-top:1px solid rgba(255,255,255,.04);vertical-align:top;}
+
+.pager{display:flex;justify-content:space-between;gap:16px;margin-top:48px;}
+.pager-card{flex:1;padding:16px 18px;border-radius:var(--radius-md);display:flex;flex-direction:column;gap:4px;}
+.pager-card.next{text-align:right;align-items:flex-end;}
+.pager-label{font-size:10.5px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em;}
+.pager-title{font-size:14px;font-weight:600;color:var(--text-primary);}
+.pager-card.empty{visibility:hidden;}
+
+.toc{position:sticky;top:92px;padding:18px 16px;border-radius:var(--radius-md);
+  max-height:calc(100vh - 120px);overflow-y:auto;}
+.toc-title{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);margin-bottom:12px;font-weight:700;}
+.toc-link{display:block;font-size:12.5px;color:var(--text-dim);padding:6px 10px;
+  border-left:2px solid transparent;margin-bottom:2px;line-height:1.4;}
+.toc-link:hover{color:var(--text-secondary);}
+.toc-link.active{color:var(--text-primary);border-left:2px solid var(--accent-1);
+  background:var(--bg-lighter);border-radius:0 8px 8px 0;}
+.toc-link.sub{padding-left:20px;font-size:12px;}
+
+@media (max-width:980px){
+  .layout{grid-template-columns:1fr;}
+  .sidebar,.toc{position:static;max-height:none;}
+  aside.rail{display:none;}
+}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="logo" href="index.html" aria-label="Grafana Labs — back to all guides"><svg class="glogo" viewBox="0 0 222 60" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Grafana Labs"><title>Grafana Labs</title><defs><linearGradient id="gflogo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF23F"/><stop offset="0.38" stop-color="#FBB040"/><stop offset="1" stop-color="#F05A28"/></linearGradient></defs><g fill="url(#gflogo)" transform="translate(0,-3)"><path d="M31 4 C 28 10 29.5 15 27 18.5 C 25.2 15.5 25 12.8 25.6 10.4 C 20.5 14 18 21.5 21 28 C 23.2 32.6 27.4 35 31 35 C 35.6 35 40 32.2 41.6 27.4 C 43.2 22.4 41 16.5 36.6 13.4 C 37.4 16.6 36.8 19 34.8 20.8 C 36.4 15.6 34.6 8.6 31 4 Z"/><path d="M18.5 38 h23 a2.5 2.5 0 0 1 2.5 2.5 a4 4 0 0 1 -4 4 h-22.5 a4 4 0 0 1 -4 -4 a2.5 2.5 0 0 1 2.5 -2.5 Z"/><path d="M24.5 47 h11 v5.5 a5.5 5.5 0 0 1 -11 0 Z"/></g><text x="56" y="39" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="29" font-weight="700" letter-spacing="-0.5" fill="#FFFFFF">Grafana Labs</text></svg></a>
+    <div>
+      <div class="product-name">IRM</div>
+      <div class="product-sub">Best Practices</div>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="top-actions">
+      <div class="version-pill flat-raised">Grafana Cloud IRM</div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <aside class="sidebar raised">
+      <div class="nav-group"><div class="nav-group-title">On-Call</div>
+<a class="nav-link active" href="on-call-schedules.html"><span class="dot-marker"></span>On-Call Schedules</a>
+<a class="nav-link" href="escalation-chains.html"><span class="dot-marker"></span>Escalation Chains</a>
+</div>
+<div class="nav-group"><div class="nav-group-title">Alert Sources</div>
+<a class="nav-link" href="integrations.html"><span class="dot-marker"></span>Integrations</a>
+</div>
+<div class="nav-group"><div class="nav-group-title">Incidents</div>
+<a class="nav-link" href="incident-management.html"><span class="dot-marker"></span>Incident Management</a>
+<a class="nav-link" href="tasks.html"><span class="dot-marker"></span>Tasks</a>
+</div>
+<div class="nav-group"><div class="nav-group-title">Measure &amp; Improve</div>
+<a class="nav-link" href="insights.html"><span class="dot-marker"></span>Insights</a>
+</div>
+<div class="nav-group"><div class="nav-group-title">Administer</div>
+<a class="nav-link" href="settings.html"><span class="dot-marker"></span>Settings</a>
+<a class="nav-link" href="alert-fatigue.html"><span class="dot-marker"></span>Reducing Alert Fatigue</a>
+</div>
+<div class="nav-group"><div class="nav-group-title">Responder Setup</div>
+<a class="nav-link" href="notification-setup.html"><span class="dot-marker"></span>Responder Notification Setup</a>
+<a class="nav-link" href="responder-playbook.html"><span class="dot-marker"></span>Responder Playbook</a>
+</div>
+    </aside>
+
+    <main class="content">
+      <div class="breadcrumb">
+        <span><a href="index.html">Guides</a></span><span class="sep">/</span>
+        <span>On-Call</span><span class="sep">/</span>
+        <span class="current">On-Call Schedules</span>
+      </div>
+      <h1>On-Call Schedules</h1>
+      <p class="lede">A practical guide to designing, operating, and scaling on-call schedules in Grafana Cloud IRM. Written for platform teams configuring schedules and for engineers who will be on-call.</p>
+      <hr class="divider">
+<h2 id="1-why-on-call-schedules-matter">1. Why on-call schedules matter<span class="anchor">#1-why-on-call-schedules-matter</span></h2>
+<p>On-call schedules determine who receives pages when escalation chains execute. Well-designed schedules ensure reliable coverage while respecting team members' time. In Grafana IRM, alerts flow through this path:</p>
+<div class="code-block raised"><div class="code-head"><span class="fname">text</span><button class="copy-btn flat-raised" onclick="copyCode(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>Copy</button></div><pre class="code-body">Alert → Route → Escalation Chain → Schedule → On-call Responder</pre></div>
+<p>Escalation chains reference schedules through notification steps ("Notify users from on-call schedule"), so schedule design and escalation design go hand in hand.</p>
+<div class="callout info raised"><div class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg></div><div class="body"><div class="title">Key concept — dynamic evaluation</div><p>IRM evaluates schedules at *execution time*, not when the alert was created. If someone swaps a shift mid-escalation, the new on-call person receives the next notification. This differs from escalation chains, which are snapshotted when an alert group is created.</p></div></div>
+<h2 id="2-core-concepts">2. Core concepts<span class="anchor">#2-core-concepts</span></h2>
+<div class="table-wrap raised"><table><thead><tr><th>Concept</th><th>Definition</th></tr></thead><tbody><tr><td><strong>Schedule</strong></td><td>The container that defines who is on-call at any given time; holds one or more shifts/rotations</td></tr><tr><td><strong>Rotation</strong></td><td>A recurring pattern (daily, weekly, custom) that generates on-call shifts</td></tr><tr><td><strong>Shift</strong></td><td>A specific time period when a person or group is responsible for responding</td></tr><tr><td><strong>Layer</strong></td><td>Concurrent rotation patterns; shifts in higher layers override lower ones</td></tr><tr><td><strong>Override</strong></td><td>A one-time exception for time off or special coverage; doesn't change the underlying rotation</td></tr><tr><td><strong>Shift swap</strong></td><td>An exchange of shifts between two users; maintains rotation continuity and is easier to audit</td></tr><tr><td><strong>Recurrence group</strong></td><td>A group of users on-call simultaneously within a rotation; all members are notified together</td></tr></tbody></table></div>
+<h2 id="3-choose-the-right-schedule-type">3. Choose the right schedule type<span class="anchor">#3-choose-the-right-schedule-type</span></h2>
+<p>Grafana IRM supports three management approaches:</p>
+<div class="table-wrap raised"><table><thead><tr><th>Type</th><th>Managed via</th><th>Best for</th><th>Notes</th></tr></thead><tbody><tr><td><strong>Web</strong></td><td>IRM UI</td><td>Teams new to on-call, simple rotations, visual editing</td><td>Drag-and-drop editing, rotation preview, override management</td></tr><tr><td><strong>iCal</strong></td><td>External calendar (e.g. Google Calendar)</td><td>Migrations, teams with existing calendar-based schedules</td><td>Changes require editing the external calendar; IRM syncs periodically; limited in-app editing</td></tr><tr><td><strong>API / Terraform</strong></td><td>Code</td><td>Infrastructure-as-code teams, automation, many teams at scale</td><td>Full API control; can enable web-based overrides on top of code-managed rotations</td></tr></tbody></table></div>
+<div class="callout info raised"><div class="icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg></div><div class="body"><div class="title">Rule of thumb</div><p>Web for simplicity, iCal for integration, API/Terraform for automation.</p></div></div>
+<h2 id="4-rotation-design-best-practices">4. Rotation design best practices<span class="anchor">#4-rotation-design-best-practices</span></h2>
+<h3 id="pick-a-rotation-length-that-matches-your-alert-volume">Pick a rotation length that matches your alert volume</h3>
+<div class="table-wrap raised"><table><thead><tr><th>Pattern</th><th>Duration</th><th>Use case</th></tr></thead><tbody><tr><td>Daily</td><td>24 hours</td><td>High-frequency alerts, distributed teams</td></tr><tr><td>Weekly</td><td>7 days</td><td>Most common; good work-life balance</td></tr><tr><td>Bi-weekly</td><td>14 days</td><td>Smaller teams, less frequent alerts</td></tr></tbody></table></div>
+<p>Combine rotation frequency with shift length to fit your team: 12-hour shifts with a weekly rotation (two rotations covering day and night), business-hours shifts (9:00–18:00), or extended 36-hour shifts on a bi-daily rotation.</p>
+<h3 id="set-the-rotation-start-explicitly">Set the rotation start explicitly</h3>
+<p>Don't rely on default behavior. Distinguish <strong>shift start</strong> (when the shift pattern begins each day/week) from <strong>rotation start</strong> (when the rotation through users begins) — set the rotation start deliberately when you want handoffs aligned to a specific date, such as a sprint boundary.</p>
+<h3 id="use-recurrence-groups-for-shared-responsibility">Use recurrence groups for shared responsibility</h3>
+<p>Group multiple users in one recurrence group to put them on-call simultaneously. Common patterns: co-primary responders, follow-the-sun (groups per time zone), graduated response (junior/senior pairing), shadow coverage for onboarding, and backup coverage during critical periods.</p>
+<h3 id="layer-schedules-for-escalation-depth">Layer schedules for escalation depth</h3>
+<p>Use separate schedules for primary, secondary, and management tiers, referenced from one escalation chain:</p>
+<div class="code-block raised"><div class="code-head"><span class="fname">text</span><button class="copy-btn flat-raised" onclick="copyCode(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>Copy</button></div><pre class="code-body">1. Notify on-call from "Primary Schedule"
+2. Wait 5 minutes
+3. Notify on-call from "Secondary Schedule"
+4. Wait 10 minutes
+5. Notify on-call from "Management Schedule"</pre></div>
+<p>Primary is the first line of defense (people most familiar with the system), secondary backs up if primary doesn't acknowledge in time, and tertiary is the final escalation point.</p>
+<h3 id="common-rotation-patterns">Common rotation patterns</h3>
+<p>Documented examples you can adapt (see <a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/on-call-schedules/schedule-examples/" target="_blank" rel="noopener">schedule examples</a>):</p>
+<ol class="doc-list"><li>Weekly rotation with 12-hour daily shifts (day/night split)</li><li>Bi-daily rotation during workdays (weekday mask on)</li><li>Bi-daily rotation with 36-hour shifts (weekday mask off)</li><li>Weekly rotation with 9-hour workday shifts (9:00–18:00)</li><li>Bi-weekly rotation with 8-hour daily shifts (repeat groups in the list to alternate every two weeks)</li><li>Team rotation with multiple users per shift (e.g. Group 1: Alice + Bob → Group 2: Charlie → Group 3: Diana + Eve)</li></ol>
+<h2 id="5-time-zones-and-distributed-teams">5. Time zones and distributed teams<span class="anchor">#5-time-zones-and-distributed-teams</span></h2>
+<ul class="doc-list"><li><strong>Enable timezone support</strong> for new web schedules: shifts respect the schedule's timezone and daylight saving time is handled automatically. Legacy UTC-stored shifts require manual DST adjustment and cause cross-timezone confusion.</li><li><strong>Test timezone changes carefully.</strong> A rotation starting "Monday 9am" in US/Pacific may fall on Monday or Tuesday in UTC depending on DST; changing a schedule's timezone can unexpectedly shift the rotation day.</li><li>For follow-the-sun coverage, create one rotation (or recurrence group) per region and verify handoff times land inside each region's working hours.</li></ul>
+<h2 id="6-handling-changes-swaps-overrides-and-priorities">6. Handling changes: swaps, overrides, and priorities<span class="anchor">#6-handling-changes-swaps-overrides-and-priorities</span></h2>
+<ul class="doc-list"><li><strong>Prefer shift swaps for planned changes.</strong> The swapped user returns to their normal position afterward, rotation continuity is maintained, and swaps are easier to track and audit.</li><li><strong>Use overrides for last-minute coverage.</strong> Overrides create a one-time exception without altering the underlying rotation.</li><li><strong>Set priorities intentionally.</strong> When shifts overlap, higher priority wins. Overrides typically use priority 99 (highest); primary shifts use lower priorities (0–10).</li><li>When editing rotations, choose <strong>Save as new</strong> (rather than Update) to preserve rotation history and version your rotations.</li></ul>
+<h2 id="7-monitor-schedule-quality">7. Monitor schedule quality<span class="anchor">#7-monitor-schedule-quality</span></h2>
+<p>Grafana IRM scores each schedule from 0–100:</p>
+<div class="table-wrap raised"><table><thead><tr><th>Score</th><th>Rating</th><th>Meaning</th></tr></thead><tbody><tr><td>81–100</td><td>Great</td><td>Well-balanced, consistent coverage</td></tr><tr><td>61–80</td><td>Good</td><td>Minor improvements possible</td></tr><tr><td>41–60</td><td>Medium</td><td>Some gaps or imbalances</td></tr><tr><td>21–40</td><td>Low</td><td>Significant improvements needed</td></tr><tr><td>0–20</td><td>Poor</td><td>Major coverage issues</td></tr></tbody></table></div>
+<p>Practices to keep quality high:</p>
+<ul class="doc-list"><li><strong>Enable gap and empty-shift reports.</strong> Gaps (periods with no coverage) and empty shifts (shifts with no assigned users) both cause missed alerts.</li><li><strong>Review balance scores regularly</strong> to catch overloaded members; adjust rotations if some users consistently carry more load.</li><li><strong>Account for holidays and time off</strong> when assessing fairness, and consider timezone distribution for follow-the-sun teams.</li><li>Note that deleted users or users lacking on-call permissions also lower the score.</li><li>Enable Slack notifications for weekly gap reports and shifts missing users.</li></ul>
+<h2 id="8-onboarding-responders">8. Onboarding responders<span class="anchor">#8-onboarding-responders</span></h2>
+<ul class="doc-list"><li>Users need Admin or Editor roles to be assigned shifts; Viewer-role users cannot be on-call or receive alert notifications.</li><li>Every responder must configure <strong>personal notification rules</strong> (default and important chains) — a schedule is only as good as the notifications behind it.</li><li>Have responders install the Grafana IRM mobile app and connect Slack in their IRM profile (required for auto-updated Slack on-call user groups).</li><li>When testing a new schedule, add yourself as the current on-call user first to avoid paging teammates.</li><li>Verify with the <strong>Final schedule</strong> view and the <strong>On-call now</strong> indicator before wiring the schedule to production escalation chains.</li></ul>
+<h2 id="9-schedules-as-code-terraform-and-api">9. Schedules as code (Terraform and API)<span class="anchor">#9-schedules-as-code-terraform-and-api</span></h2>
+<p>Managing schedules as code brings automation and efficiency, consistency across teams, version control and collaboration through Git, CI/CD integration, and confident scaling — replicate proven rotation patterns across dozens of teams.</p>
+<h3 id="terraform">Terraform</h3>
+<p>The <a href="https://registry.terraform.io/providers/grafana/grafana/latest/docs" target="_blank" rel="noopener">Grafana Terraform provider</a> manages schedules with these resources:</p>
+<ul class="doc-list"><li><code>grafana_oncall_schedule</code> — the schedule container (<code>type = "calendar"</code> for Terraform-defined shifts; <code>enable_web_overrides = true</code> lets responders manage overrides in the UI while code owns the rotations)</li><li><code>grafana_oncall_on_call_shift</code> — the rotation pattern (<code>type = "rolling_users"</code> is the standard choice; <code>recurrent_event</code> is deprecated)</li><li><code>grafana_oncall_escalation</code> — connects the schedule to an escalation chain</li><li>Data sources: <code>grafana_oncall_user</code>, <code>grafana_oncall_team</code>, <code>grafana_oncall_slack_channel</code>, <code>grafana_oncall_user_group</code></li></ul>
+<p>Provider setup:</p>
+<div class="code-block raised"><div class="code-head"><span class="fname">terraform</span><button class="copy-btn flat-raised" onclick="copyCode(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>Copy</button></div><pre class="code-body"><span class="c-key">provider</span> <span class="c-str">"grafana"</span> {
+  alias      = <span class="c-str">"oncall"</span>
+  url        = <span class="c-str">"&lt;Stack-URL&gt;"</span>
+  auth       = <span class="c-str">"&lt;Service-account-token&gt;"</span>
+  oncall_url = <span class="c-str">"&lt;OnCall-URL&gt;"</span>
+}</pre></div>
+<p>A complete weekly rotation:</p>
+<div class="code-block raised"><div class="code-head"><span class="fname">terraform</span><button class="copy-btn flat-raised" onclick="copyCode(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>Copy</button></div><pre class="code-body"><span class="c-key">data</span> <span class="c-str">"grafana_oncall_user"</span> <span class="c-str">"user_one"</span> {
+  <span class="c-key">provider</span> = grafana.oncall
+  username = <span class="c-str">"user_one"</span>
+}
+
+<span class="c-key">data</span> <span class="c-str">"grafana_oncall_user"</span> <span class="c-str">"user_two"</span> {
+  <span class="c-key">provider</span> = grafana.oncall
+  username = <span class="c-str">"user_two"</span>
+}
+
+<span class="c-key">resource</span> <span class="c-str">"grafana_oncall_on_call_shift"</span> <span class="c-str">"week_shift"</span> {
+  <span class="c-key">provider</span>   = grafana.oncall
+  name       = <span class="c-str">"Week shift"</span>
+  <span class="c-key">type</span>       = <span class="c-str">"rolling_users"</span>
+  start      = <span class="c-str">"2025-03-01T00:00:00"</span>
+  duration   = 60 * 60 * 24  <span class="c-com"># 24 hours in seconds</span>
+  frequency  = <span class="c-str">"weekly"</span>
+  by_day     = [<span class="c-str">"MO"</span>, <span class="c-str">"TU"</span>, <span class="c-str">"WE"</span>, <span class="c-str">"TH"</span>, <span class="c-str">"FR"</span>, <span class="c-str">"SA"</span>, <span class="c-str">"SU"</span>]
+  week_start = <span class="c-str">"MO"</span>
+  rolling_users = [
+    [data.grafana_oncall_user.user_one.id],
+    [data.grafana_oncall_user.user_two.id]
+  ]
+  time_zone = <span class="c-str">"UTC"</span>
+}
+
+<span class="c-key">resource</span> <span class="c-str">"grafana_oncall_schedule"</span> <span class="c-str">"primary"</span> {
+  <span class="c-key">provider</span>  = grafana.oncall
+  name      = <span class="c-str">"Primary"</span>
+  <span class="c-key">type</span>      = <span class="c-str">"calendar"</span>
+  time_zone = <span class="c-str">"UTC"</span>
+  shifts    = [grafana_oncall_on_call_shift.week_shift.id]
+}
+
+<span class="c-key">resource</span> <span class="c-str">"grafana_oncall_escalation"</span> <span class="c-str">"notify_schedule"</span> {
+  <span class="c-key">provider</span>                     = grafana.oncall
+  escalation_chain_id          = grafana_oncall_escalation_chain.default.id
+  <span class="c-key">type</span>                         = <span class="c-str">"notify_on_call_from_schedule"</span>
+  notify_on_call_from_schedule = grafana_oncall_schedule.primary.id
+  position                     = 0
+}</pre></div>
+<p>Scaling tip: build <code>rolling_users</code> dynamically from a team map to stamp out consistent regional rotations:</p>
+<div class="code-block raised"><div class="code-head"><span class="fname">terraform</span><button class="copy-btn flat-raised" onclick="copyCode(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>Copy</button></div><pre class="code-body"><span class="c-key">resource</span> <span class="c-str">"grafana_oncall_on_call_shift"</span> <span class="c-str">"emea_weekday_shift"</span> {
+  name       = <span class="c-str">"EMEA Weekday Shift"</span>
+  <span class="c-key">type</span>       = <span class="c-str">"rolling_users"</span>
+  start      = <span class="c-str">"2022-02-28T03:00:00"</span>
+  duration   = 60 * 60 * 12 <span class="c-com"># 12 hours</span>
+  frequency  = <span class="c-str">"weekly"</span>
+  interval   = 1
+  by_day     = [<span class="c-str">"MO"</span>, <span class="c-str">"TU"</span>, <span class="c-str">"WE"</span>, <span class="c-str">"TH"</span>, <span class="c-str">"FR"</span>]
+  week_start = <span class="c-str">"MO"</span>
+  rolling_users = [<span class="c-key">for</span> k in <span class="c-fn">flatten</span>([
+    local.teams_map_of_user_id.emea,
+  ]) : [k]]
+  start_rotation_from_user_index = 0
+  team_id = data.grafana_oncall_team.my_team.id
+}</pre></div>
+<p>Key details to remember: <code>duration</code> is in <strong>seconds</strong>; <code>start</code> uses <code>yyyy-MM-dd'T'HH:mm:ss</code>; <code>level</code> sets shift priority; <code>start_rotation_from_user_index</code> controls who starts first; existing schedules can be imported with <code>terraform import grafana_oncall_schedule.name "{{ id }}"</code>.</p>
+<h3 id="api">API</h3>
+<p>For custom integrations or dynamic management, use the <a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/reference/oncall-api/schedules/" target="_blank" rel="noopener">IRM Schedules API</a>:</p>
+<div class="code-block raised"><div class="code-head"><span class="fname">bash</span><button class="copy-btn flat-raised" onclick="copyCode(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>Copy</button></div><pre class="code-body"><span class="c-fn">curl</span> -X <span class="c-key">POST</span> <span class="c-str">"https://&lt;OnCall-API-URL&gt;/api/v1/schedules/"</span> \
+  -H <span class="c-str">"Authorization: Bearer $GRAFANA_API_KEY"</span> \
+  -H <span class="c-str">"Content-Type: application/json"</span> \
+  -d '{
+    <span class="c-str">"name"</span>: <span class="c-str">"Primary On-Call Schedule"</span>,
+    <span class="c-str">"team_id"</span>: <span class="c-str">"your-team-id"</span>,
+    <span class="c-str">"type"</span>: <span class="c-str">"calendar"</span>,
+    <span class="c-str">"time_zone"</span>: <span class="c-str">"UTC"</span>
+  }'</pre></div>
+<p>Endpoints: <code>GET/POST /api/v1/schedules/</code>, <code>PUT/DELETE /api/v1/schedules/{schedule_id}</code>.</p>
+<h3 id="as-code-best-practices">As-code best practices</h3>
+<ul class="doc-list"><li><strong>Use source control</strong> — store Terraform configurations and API scripts in Git to track changes</li><li><strong>Automate deployments</strong> — use CI/CD (GitHub Actions, Terraform Cloud) to manage schedules across environments</li><li><strong>Apply RBAC</strong> — restrict who can modify schedules via API tokens and IAM policies</li><li><strong>Test before applying</strong> — always run <code>terraform plan</code> before deploying to production</li><li><strong>Use variables and modules</strong> — create reusable schedule patterns and stamp them out per team</li><li><strong>Document your approach</strong> — maintain documentation of schedule structure and rotation patterns</li><li><strong>Implement monitoring</strong> — alert on schedule configuration changes or failures</li><li><strong>Always specify time zones per rotation</strong> and test across DST boundaries for long-lived rotations</li></ul>
+<h2 id="10-quick-reference-checklist">10. Quick reference checklist<span class="anchor">#10-quick-reference-checklist</span></h2>
+<ul class="checklist"><li class="check-item"><span class="checkbox "></span><span>Choose schedule type: web (simplicity), iCal (integration), API/Terraform (automation)</span></li><li class="check-item"><span class="checkbox "></span><span>Match rotation length to alert volume (weekly is the most common default)</span></li><li class="check-item"><span class="checkbox "></span><span>Set rotation start explicitly; align handoffs to working hours</span></li><li class="check-item"><span class="checkbox "></span><span>Enable timezone support; verify DST behavior</span></li><li class="check-item"><span class="checkbox "></span><span>Use recurrence groups for co-primary/shadow patterns</span></li><li class="check-item"><span class="checkbox "></span><span>Build primary → secondary → management escalation tiers</span></li><li class="check-item"><span class="checkbox "></span><span>Set override priority high (99); primary shifts low (0–10)</span></li><li class="check-item"><span class="checkbox "></span><span>Prefer shift swaps for planned changes; overrides for last-minute cover</span></li><li class="check-item"><span class="checkbox "></span><span>Enable quality reports; keep score above 80</span></li><li class="check-item"><span class="checkbox "></span><span>Ensure all responders have Editor+ roles and notification rules configured</span></li><li class="check-item"><span class="checkbox "></span><span>Manage at scale with Terraform modules + Git + CI/CD</span></li></ul>
+<h2 id="references">References<span class="anchor">#references</span></h2>
+<ul class="doc-list"><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/on-call-schedules/" target="_blank" rel="noopener">On-call schedules overview</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/guides/best-practices/schedules/" target="_blank" rel="noopener">Best practices for on-call schedules</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/on-call-schedules/create-schedules/" target="_blank" rel="noopener">Create on-call schedules</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/on-call-schedules/schedule-examples/" target="_blank" rel="noopener">Schedule examples</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/on-call-schedules/schedules-as-code/" target="_blank" rel="noopener">Schedules as code</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/on-call-schedules/shift-swaps-overrides/" target="_blank" rel="noopener">Shift swaps and overrides</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/on-call-schedules/import-schedules/" target="_blank" rel="noopener">Import schedules (iCal)</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/guides/best-practices/escalation-chains/" target="_blank" rel="noopener">Escalation chains best practices</a></li><li><a href="https://registry.terraform.io/providers/grafana/grafana/latest/docs/resources/oncall_schedule" target="_blank" rel="noopener">Terraform: grafana_oncall_schedule</a></li><li><a href="https://registry.terraform.io/providers/grafana/grafana/latest/docs/resources/oncall_on_call_shift" target="_blank" rel="noopener">Terraform: grafana_oncall_on_call_shift</a></li><li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/reference/oncall-api/schedules/" target="_blank" rel="noopener">IRM Schedules API reference</a></li><li><a href="https://grafana.com/docs/learning-paths/grafana-irm-configuration/create-on-call-schedule/" target="_blank" rel="noopener">Learning path: create a basic on-call schedule</a></li><li><a href="https://grafana.com/blog/get-started-with-grafana-oncall-and-terraform/" target="_blank" rel="noopener">Blog: Get started with Grafana OnCall and Terraform</a></li></ul>
+<h2 id="related-guides">Related guides<span class="anchor">#related-guides</span></h2>
+<ul class="doc-list"><li><a href="escalation-chains.html">Escalation Chains</a> — From first page to declared incident — escalation that never drops an alert.</li><li><a href="notification-setup.html">Responder Notification Setup</a> — How responders actually get paged — the foundation everything else depends on.</li><li><a href="settings.html">Settings</a> — Administer IRM: access and roles, API tokens, ChatOps, and org toggles.</li></ul>
+<p>_Part of the Grafana IRM enablement series — each topic also has an enablement deck and an implementation checklist in its folder._</p>
+      <div class="pager">
+        <div class="pager-card empty"></div>
+        <a class="pager-card next raised" href="escalation-chains.html"><div class="pager-label">Next →</div><div class="pager-title">Escalation Chains</div></a>
+      </div>
+    </main>
+
+    <aside class="rail">
+      <div class="toc raised">
+        <div class="toc-title">On this page</div>
+        <a class="toc-link" href="#1-why-on-call-schedules-matter" data-target="1-why-on-call-schedules-matter">1. Why on-call schedules matter</a>
+<a class="toc-link" href="#2-core-concepts" data-target="2-core-concepts">2. Core concepts</a>
+<a class="toc-link" href="#3-choose-the-right-schedule-type" data-target="3-choose-the-right-schedule-type">3. Choose the right schedule type</a>
+<a class="toc-link" href="#4-rotation-design-best-practices" data-target="4-rotation-design-best-practices">4. Rotation design best practices</a>
+<a class="toc-link sub" href="#pick-a-rotation-length-that-matches-your-alert-volume" data-target="pick-a-rotation-length-that-matches-your-alert-volume">Pick a rotation length that matches your alert volume</a>
+<a class="toc-link sub" href="#set-the-rotation-start-explicitly" data-target="set-the-rotation-start-explicitly">Set the rotation start explicitly</a>
+<a class="toc-link sub" href="#use-recurrence-groups-for-shared-responsibility" data-target="use-recurrence-groups-for-shared-responsibility">Use recurrence groups for shared responsibility</a>
+<a class="toc-link sub" href="#layer-schedules-for-escalation-depth" data-target="layer-schedules-for-escalation-depth">Layer schedules for escalation depth</a>
+<a class="toc-link sub" href="#common-rotation-patterns" data-target="common-rotation-patterns">Common rotation patterns</a>
+<a class="toc-link" href="#5-time-zones-and-distributed-teams" data-target="5-time-zones-and-distributed-teams">5. Time zones and distributed teams</a>
+<a class="toc-link" href="#6-handling-changes-swaps-overrides-and-priorities" data-target="6-handling-changes-swaps-overrides-and-priorities">6. Handling changes: swaps, overrides, and priorities</a>
+<a class="toc-link" href="#7-monitor-schedule-quality" data-target="7-monitor-schedule-quality">7. Monitor schedule quality</a>
+<a class="toc-link" href="#8-onboarding-responders" data-target="8-onboarding-responders">8. Onboarding responders</a>
+<a class="toc-link" href="#9-schedules-as-code-terraform-and-api" data-target="9-schedules-as-code-terraform-and-api">9. Schedules as code (Terraform and API)</a>
+<a class="toc-link sub" href="#terraform" data-target="terraform">Terraform</a>
+<a class="toc-link sub" href="#api" data-target="api">API</a>
+<a class="toc-link sub" href="#as-code-best-practices" data-target="as-code-best-practices">As-code best practices</a>
+<a class="toc-link" href="#10-quick-reference-checklist" data-target="10-quick-reference-checklist">10. Quick reference checklist</a>
+<a class="toc-link" href="#references" data-target="references">References</a>
+<a class="toc-link" href="#related-guides" data-target="related-guides">Related guides</a>
+      </div>
+    </aside>
+  </div>
+  <script>
+function copyCode(btn){
+  var pre = btn.closest('.code-block').querySelector('.code-body');
+  navigator.clipboard.writeText(pre.innerText).then(function(){
+    var old = btn.innerHTML; btn.innerHTML = 'Copied'; setTimeout(function(){ btn.innerHTML = old; }, 1200);
+  });
+}
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc-link'));
+  var map = {};
+  links.forEach(function(l){ var id=l.getAttribute('data-target'); if(id) map[id]=l; });
+  var heads = Array.prototype.slice.call(document.querySelectorAll('.content h2, .content h3'));
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){
+        links.forEach(function(l){ l.classList.remove('active'); });
+        var l = map[e.target.id]; if(l) l.classList.add('active');
+      }
+    });
+  }, {rootMargin:'-90px 0px -70% 0px', threshold:0});
+  heads.forEach(function(h){ obs.observe(h); });
+})();
+</script>
+</body>
+</html>
