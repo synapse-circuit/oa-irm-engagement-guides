@@ -15,3 +15,11 @@ A self-contained, styled HTML version of every guide in this repository. **These
 
 ↩︎ Back to the [series index](../README.md)
 
+
+Adobe Acrobat
+
+
+Summarise this
+
+
+Ask AI Assistant
